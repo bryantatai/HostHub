@@ -737,6 +737,7 @@ async function fetchAllFromSheet(){
     ['💬 Connect','Connect'],
     ['✨ Wow Box','Wow Box'],
     ['🗓 Schedule','Schedule'],
+    ['🗂 Grouped Lists','Grouped Lists'],
   ];
   var results=await Promise.all(specs.map(function(s){return fetchSheetTab(s[0],s[1]);}));
   var anyLoaded=results.some(function(r){return r&&r.length;});
@@ -759,7 +760,7 @@ function parseSheetData(results){
   var CONTENT_START_INDEX=3;
   var todayRows=results[0], rosterRows=results[1], infoRows=results[2],
       sosRows=results[3], qrRows=results[4], connectRows=results[5], wowRows=results[6],
-      schedRows=results[7]||[];
+      schedRows=results[7]||[], groupedRows=results[8]||[];
 
   // ── TODAY tab ─────────────────────────────────────────────────────────────
   if(todayRows && todayRows.length){
@@ -783,58 +784,74 @@ function parseSheetData(results){
   });
   if(newRoster.length) DATA.roster=newRoster;
 
+  // ── GROUPED LISTS tab ─────────────────────────────────────────────────────
+  // Cols: List ID | Category | Category icon | Item | Active | Sort order
+  // Builds DATA.groupedLists = { 'wow-box': [ {cat, icon, items:[...]}, ... ], ... }
+  var groupedRaw={};   // listId -> { catName -> {cat, icon, items:[{name,sort}]} }
+  var groupedCatOrder={}; // listId -> [catName in first-seen order]
+  groupedRows.slice(CONTENT_START_INDEX).forEach(function(r){
+    if(!r[0]||!r[3]||r[4]==='N')return;  // need List ID + Item, and Active≠N
+    var listId=r[0].trim(), cat=(r[1]||'').trim(), icon=(r[2]||'').trim(),
+        item=r[3].trim(), sort=parseFloat(r[5])||0;
+    if(!groupedRaw[listId]){groupedRaw[listId]={};groupedCatOrder[listId]=[];}
+    if(!groupedRaw[listId][cat]){
+      groupedRaw[listId][cat]={cat:cat,icon:icon,items:[]};
+      groupedCatOrder[listId].push(cat);
+    }
+    // carry the icon down if a later row in the same category re-specifies it
+    if(icon && !groupedRaw[listId][cat].icon) groupedRaw[listId][cat].icon=icon;
+    groupedRaw[listId][cat].items.push({name:item,sort:sort});
+  });
+  var newGrouped={};
+  Object.keys(groupedRaw).forEach(function(listId){
+    newGrouped[listId]=groupedCatOrder[listId].map(function(cat){
+      var g=groupedRaw[listId][cat];
+      g.items.sort(function(a,b){return a.sort-b.sort;});
+      return {cat:g.cat,icon:g.icon||'ti-box',items:g.items.map(function(x){return x.name;})};
+    });
+  });
+  if(Object.keys(newGrouped).length) DATA.groupedLists=newGrouped;
+
   // ── INFO HUB tab ─────────────────────────────────────────────────────────
-  // Cols: Section title | Position | Icon keyword | Body text | Active
+  // Cols: Section title | Position | Icon | Body | Active | Photo URL | Photo caption | Content type | Linked list ID
   var newInfo=[];
   infoRows.slice(CONTENT_START_INDEX).forEach(function(r){
     if(!r[0]||r[4]==='N')return;
-    newInfo.push({title:r[0].trim(),position:r[1].trim()||'All',icon:r[2].trim(),body:r[3].trim(),photo:(r[5]||'').trim(),photoCaption:(r[6]||'').trim()});
+    var contentType=(r[7]||'text').trim();
+    var linkedList=(r[8]||'').trim();
+    var entry={
+      title:r[0].trim(), position:r[1].trim()||'All', icon:r[2].trim(),
+      body:r[3].trim(), photo:(r[5]||'').trim(), photoCaption:(r[6]||'').trim(),
+      contentType:contentType, linkedList:linkedList
+    };
+    // A grouped-list section renders as an expandable category grid from DATA.groupedLists
+    if(contentType==='grouped-list' && linkedList) entry.body='__grouped__';
+    newInfo.push(entry);
   });
-  // Always inject wow box as first item
-  newInfo.unshift({title:'Wow box',position:'All',icon:'ti-gift',body:'__wowbox__'});
+  // Backward-compat: if no grouped-list section is defined but we have wow-box data,
+  // inject a Wow box section so nothing disappears for older sheets.
+  var hasGrouped=newInfo.some(function(s){return s.body==='__grouped__';});
+  if(!hasGrouped){
+    newInfo.unshift({title:'Wow box',position:'All',icon:'ti-gift',body:'__grouped__',contentType:'grouped-list',linkedList:'wow-box'});
+  }
   if(newInfo.length>1) DATA.info=newInfo;
 
-  // ── SOS / CONTINGENCIES tab ───────────────────────────────────────────────
-  // Cols: Scenario | Icon keyword | Steps (line-separated) | Active
-  var newSos=[];
-  sosRows.slice(CONTENT_START_INDEX).forEach(function(r){
-    if(!r[0]||r[3]==='N')return;
-    newSos.push({
-      scenario:r[0].trim(), icon:r[1].trim(),
-      steps:r[2].split('\n').filter(function(s){return s.trim();}).map(function(s){return s.replace(/^\d+\.\s*/,'');})
+  // ── WOW BOX tab (legacy) ──────────────────────────────────────────────────
+  // If the Grouped Lists tab has no 'wow-box', fall back to the old Wow Box tab
+  // so existing sheets keep working.
+  if(!DATA.groupedLists || !DATA.groupedLists['wow-box']){
+    var wowMap={}, wowOrder=[];
+    wowRows.slice(CONTENT_START_INDEX).forEach(function(r){
+      if(!r[0]||r[3]==='N')return;
+      var cat=r[0].trim();
+      if(!wowMap[cat]){wowMap[cat]={cat:cat,icon:r[1].trim(),items:[]};wowOrder.push(cat);}
+      wowMap[cat].items.push(r[2].trim());
     });
-  });
-  if(newSos.length) DATA.sos=newSos;
-
-  // ── QUICK REF tab ─────────────────────────────────────────────────────────
-  // Cols: Label | Value | Active
-  var newQr=[];
-  qrRows.slice(CONTENT_START_INDEX).forEach(function(r){
-    if(!r[0]||r[2]==='N')return;
-    newQr.push({label:r[0].trim(),value:r[1].trim(),photo:(r[3]||'').trim()});
-  });
-  if(newQr.length) DATA.quickref=newQr;
-
-  // ── CONNECT tab ───────────────────────────────────────────────────────────
-  // Cols: Chat name | Description | Duty day | Telegram invite URL | Active
-  var newConnect=[];
-  connectRows.slice(CONTENT_START_INDEX).forEach(function(r){
-    if(!r[0]||r[4]==='N')return;
-    newConnect.push({label:r[0].trim(),desc:r[1].trim(),day:r[2].trim(),url:r[3].trim()});
-  });
-  if(newConnect.length) DATA.connect=newConnect;
-
-  // ── WOW BOX tab ───────────────────────────────────────────────────────────
-  // Cols: Category | Icon keyword | Item name | Active
-  var wowMap={};
-  var wowOrder=[];
-  wowRows.slice(CONTENT_START_INDEX).forEach(function(r){
-    if(!r[0]||r[3]==='N')return;
-    var cat=r[0].trim();
-    if(!wowMap[cat]){wowMap[cat]={cat:cat,icon:r[1].trim(),items:[]};wowOrder.push(cat);}
-    wowMap[cat].items.push(r[2].trim());
-  });
-  if(wowOrder.length) DATA.wowbox=wowOrder.map(function(c){return wowMap[c];});
+    if(wowOrder.length){
+      if(!DATA.groupedLists) DATA.groupedLists={};
+      DATA.groupedLists['wow-box']=wowOrder.map(function(c){return wowMap[c];});
+    }
+  }
 
   // ── SCHEDULE tab ──────────────────────────────────────────────────────────
   // Cols: Day | Time | Item | Type (normal/transition/note) | Host note | Active
@@ -1063,16 +1080,18 @@ var DATA = {
     {id:'helpdesk',     name:'Helpdesk',      icon:'ti-help-circle',   sub:'Queries · Wayfinding',        desc:'General delegate queries and wayfinding.',tip:'If you don\'t know, radio it in. Never guess.'},
     {id:'luggage',      name:'Luggage',       icon:'ti-briefcase',     sub:'Bag storage · Retrieval',     desc:'Bag storage and retrieval. Tag every bag.',tip:'Log the count with your lead. Retrieve only with matching tag.'},
   ],
-  wowbox:[
+  groupedLists:{
+    'wow-box':[
     {cat:'Weather',       icon:'ti-cloud-rain', items:['Umbrellas','Towels','Socks','Tissue paper','Plastic bags','Toyogo storage boxes','Heat packs','Cashmere shawls','Hand warmers','Disposable ponchos']},
     {cat:'Wow Experience',icon:'ti-sparkles',   items:['Kopiko candies','Notebooks & pens','Highlighters','Mints','Fidget toys','Foam art stickers','Crayons & drawing pads']},
     {cat:'Practical',     icon:'ti-shirt',      items:['Stain remover pens','Body wipes','Mouthwash','Dental floss picks','Hair ties & bobby pins','Safety pins','Sanitary pads & tampons','Disposable toothbrushes & toothpaste','Lip balm','Hand cream','Hand sanitiser','Plasters / bandages','Cotton buds','Oil blotting sheets','Mini combs']},
     {cat:'Health',        icon:'ti-pill',       items:['Vitamin C candies','Cough drops','Eye drops','Face masks','Electrolyte sachets','Thermometer']},
     {cat:'Snacks',        icon:'ti-cookie',     items:['Granola bars','Nuts','Crackers','Cup noodles']},
-  ],
+    ],
+  },
   info:[
     {title:"Food guide (for delegates)",position:"All",icon:"ti-tools-kitchen-2",body:"__foodguide__"},
-    {title:"Wow box",position:"All",icon:"ti-gift",body:"__wowbox__"},
+    {title:"Wow box",position:"All",icon:"ti-gift",body:"__grouped__",contentType:"grouped-list",linkedList:"wow-box"},
     {title:"Wet weather plan",position:"All",icon:"ti-cloud-rain",body:"If it rains:\n1. Alert your lead via Telegram immediately\n2. Direct guests to Entrance A (covered walkway)\n3. Retrieve umbrellas from Ground store room, left shelf\n4. Ensure Ground team covers Entrance A\n5. Check with lead before repositioning"},
     {title:"First aid",position:"All",icon:"ti-first-aid-kit",body:"First aid kits: [Location 1] and [Location 2].\n\nIf a guest is unwell:\n1. Stay \u2014 do not leave alone\n2. Guide to a quiet space\n3. Source water\n4. Radio lead: name, location, condition\n5. Do not leave until handover confirmed"},
     {title:"FAQ",position:"All",icon:"ti-help-square",body:"Q: Where is the toilet?\nA: Level 4, to the extreme left and right sides of the atrium.\n\nQ: Where do I sit?\nA: Our ushers will direct you to your seats.\n\nQ: Can I meet a pastor?\nA: Obtain more information about the request. How does he/she know the pastor, where and when. Get the requestor's name and number/email but do not promise anything. Inform the requester that we will note their request and will inform them if we have updates. Radio your lead immediately. Ensure the loop is closed later.\n\nQ: Is there parking?\nA: There is parking available at level 1. Alternatively, the nearest carparks can be found at the residental HDB blocks 414-417 or the StoreFriendly Centre building beside our church. \n\nQ: Can I bring food into the Auditorium?\nA: Yes! However, be sure to dispose your trash after.\n\nQ: Where can I get water?\nA: You may purchase mineral water from the fridges at the sides of the atrium or refill your water bottle at the water point located beside the Coffee/Barista pop up area.\n\nQ: Can I refill my waterbottle? Do you have warm water?\nA: Yes you can refill your water bottle at the water points. We should have a warm water option at the water cooler. Otherwise, please approach the Coffee/Barista pop up for some hot water if needed.\n\nQ: How can I give my offering, I don't have any SG Banking App.\nA: You may provide your offering in cash via the offering envelopes located behnd the chairs.\n\nQ: Can I take the stairs up instead of the lifts?\nA: The staircase is currently not accessible. If it gets too crowded, we will direct you to alterative lifts (i.e. cargo lifts).\n\nQ: Is there WiFi/ Can I connect to a WiFi network?\nA: Yes, we have XXXXXX(help me input the correct answer, is it QR code?)\n\nQ: Do you have a portable charger?\nA: Yes, we do have available chargers for rental that is located right opposite the baby space. \n\nQ:Is there any area with a power socket where I can charge my device?\nA: Yes, there are a few located around level 4. However, for safety we recommend that you do not leave your device unattended."},
@@ -1174,6 +1193,7 @@ var S={
   infoFilter:'All', posId:null, leadTab:'today',
   leadUnlocked:false, icUnlocked:false,
   wowCat:null,
+  groupCat:{},
   // debrief state
   debriefDay:TODAY_IDX, debriefSess:null, // null = day landing
   pcTarget:null, // 'lead' | 'ic' | 'debrief_ic' | 'debrief_lead'
@@ -1553,7 +1573,17 @@ function renderInfoSections(){
   var filtered=DATA.info.filter(function(s){return S.infoFilter==='All'?true:s.position===S.infoFilter||s.position==='All';});
   filtered.forEach(function(s,i){
     var div=document.createElement('div');div.className='info-row';
-    var bodyHtml=s.body==='__wowbox__'?renderWowBox():(s.body==='__foodguide__'?renderFoodGuide():'<div class="info-body-text">'+esc(s.body)+'</div>'+photoHtml(s.photo,s.photoCaption));
+    var bodyHtml;
+    if(s.body==='__grouped__'){
+      bodyHtml=renderGroupedList(s.linkedList||'wow-box', i);
+    } else if(s.body==='__wowbox__'){
+      // legacy marker — still supported
+      bodyHtml=renderGroupedList('wow-box', i);
+    } else if(s.body==='__foodguide__'){
+      bodyHtml=renderFoodGuide();
+    } else {
+      bodyHtml='<div class="info-body-text">'+esc(s.body)+'</div>'+photoHtml(s.photo,s.photoCaption);
+    }
     div.innerHTML='<button class="info-toggle" id="itog'+i+'" onclick="toggleInfo('+i+')"><div class="info-icon-wrap"><i class="ti '+s.icon+'"></i></div><div style="flex:1;"><div class="info-title">'+esc(s.title)+'</div>'+(s.position!=='All'?'<div class="info-sub">'+esc(s.position)+'</div>':'')+'</div><i class="ti ti-chevron-down info-chev"></i></button><div class="info-body" id="ibody'+i+'">'+bodyHtml+'</div>';
     el.appendChild(div);
   });
@@ -1580,14 +1610,36 @@ function renderFoodGuide(){
     '<div class="photo-wrap" style="cursor:zoom-in;"><img src="'+FOOD_GUIDE_IMG+'" alt="Paya Lebar Food Guide" onclick="openLightbox(this.src)"/></div>'+
     '<div class="photo-cap">Tap to enlarge · Delegates scan the QR to browse meals, snacks &amp; drinks near Paya Lebar</div>';
 }
-function renderWowBox(){
+// Renders a category grid + expandable items for any grouped list (wow-box, food, etc).
+// Reused by every Info Hub section whose Content type = grouped-list.
+// State is keyed per section index so multiple grouped lists stay independent.
+function renderGroupedList(listId, sectionIdx){
+  var list=(DATA.groupedLists&&DATA.groupedLists[listId])||[];
+  if(!list.length) return '<div class="info-body-text" style="color:var(--label-3);">No items yet. Add them in the Grouped Lists tab.</div>';
+  if(!S.groupCat) S.groupCat={};
+  var openCat=S.groupCat[sectionIdx];
   var html='<div class="wow-grid">';
-  DATA.wowbox.forEach(function(c,i){html+='<button class="wow-cat'+(S.wowCat===i?' active':'')+'" onclick="toggleWowCat('+i+')"><i class="ti '+c.icon+'"></i><div class="wow-cat-name">'+esc(c.cat)+'</div></button>';});
+  list.forEach(function(c,i){
+    html+='<button class="wow-cat'+(openCat===i?' active':'')+'" onclick="toggleGroupCat('+sectionIdx+','+i+')"><i class="ti '+c.icon+'"></i><div class="wow-cat-name">'+esc(c.cat)+'</div></button>';
+  });
   html+='</div>';
-  if(S.wowCat!==null){var cat=DATA.wowbox[S.wowCat];html+='<div class="wow-items">'+cat.items.map(function(item){return '<div class="wow-item"><div class="wow-dot"></div><div class="wow-item-name">'+esc(item)+'</div></div>';}).join('')+'</div>';}
+  if(openCat!=null && list[openCat]){
+    html+='<div class="wow-items">'+list[openCat].items.map(function(item){
+      return '<div class="wow-item"><div class="wow-dot"></div><div class="wow-item-name">'+esc(item)+'</div></div>';
+    }).join('')+'</div>';
+  }
   return html;
 }
-function toggleWowCat(i){S.wowCat=S.wowCat===i?null:i;renderInfoSections();setTimeout(function(){document.querySelectorAll('.info-title').forEach(function(t,idx){if(t.textContent==='Wow box'){var tog=document.getElementById('itog'+idx);if(!tog.classList.contains('open'))toggleInfo(idx);}});},50);}
+function toggleGroupCat(sectionIdx,i){
+  if(!S.groupCat) S.groupCat={};
+  S.groupCat[sectionIdx]=S.groupCat[sectionIdx]===i?null:i;
+  renderInfoSections();
+  // keep this section expanded after re-render
+  setTimeout(function(){
+    var tog=document.getElementById('itog'+sectionIdx);
+    if(tog && !tog.classList.contains('open')) toggleInfo(sectionIdx);
+  },50);
+}
 
 // ── SOS ───────────────────────────────────────────────────────────────────────
 function renderSOS(){
@@ -2033,11 +2085,23 @@ function saveLRoster(){
 }
 
 // ── INFO HUB TAB ──────────────────────────────────────────────────────────────
+function isSpecialInfo(s){return s.body==='__grouped__'||s.body==='__wowbox__'||s.body==='__foodguide__';}
 function renderLInfo(){
   var html='';
-  DATA.info.filter(function(s){return s.body!=='__wowbox__';}).forEach(function(s,i){
+  DATA.info.forEach(function(s,i){
     var realIdx=DATA.info.indexOf(s);
     var isHidden=s.active==='N';
+    if(isSpecialInfo(s)){
+      // Special sections (grouped list / food guide) aren't plain-text editable here.
+      var what = s.body==='__foodguide__' ? 'Food guide image' : ('Grouped list: '+(s.linkedList||'wow-box'));
+      html+='<div class="le-section" style="opacity:'+(isHidden?.4:1)+';margin-bottom:10px;">'+
+        '<div class="le-section-hdr">'+
+          '<div style="flex:1;"><div class="le-section-title">'+esc(s.title)+'</div><div class="le-section-sub">'+esc(what)+' · edit in its own tab/sheet</div></div>'+
+          '<label class="toggle-sw" title="'+(isHidden?'Show':'Hide')+'"><input type="checkbox" '+(isHidden?'':'checked')+' onchange="toggleInfoActive('+realIdx+')"/><span class="slider"></span></label>'+
+        '</div>'+
+      '</div>';
+      return;
+    }
     html+='<div class="le-section" style="opacity:'+(isHidden?.4:1)+';margin-bottom:10px;">'+
       '<div class="le-section-hdr">'+
         '<div style="flex:1;"><input style="font-size:14px;font-weight:700;color:var(--dark);border:none;background:transparent;outline:none;width:100%;" id="info_title_'+realIdx+'" value="'+esc(s.title)+'"/><div class="le-section-sub">'+esc(s.position)+'</div></div>'+
@@ -2058,7 +2122,8 @@ function addInfoRow(){
   setTimeout(function(){document.getElementById('leadBody').scrollTop=9999;},100);
 }
 function saveLInfo(){
-  DATA.info.filter(function(s){return s.body!=='__wowbox__';}).forEach(function(s,i){
+  DATA.info.forEach(function(s,i){
+    if(isSpecialInfo(s)) return;  // grouped/foodguide sections have no editable body here
     var realIdx=DATA.info.indexOf(s);
     var tEl=document.getElementById('info_title_'+realIdx);
     var bEl=document.getElementById('info_body_'+realIdx);
@@ -2067,7 +2132,17 @@ function saveLInfo(){
     if(bEl) s.body=bEl.value;
     if(pEl) s.photo=pEl.value.trim();
   });
-  postToSheet({action:'updateInfo',info:DATA.info.filter(function(s){return s.body!=='__wowbox__';})});
+  // Send everything, mapping the internal markers back to sheet columns
+  var payload=DATA.info.map(function(s){
+    var ct=s.contentType||(isSpecialInfo(s)?'grouped-list':'text');
+    var body=s.body;
+    if(body==='__grouped__'||body==='__wowbox__') body='Contents: choose a category below';
+    if(body==='__foodguide__') body='Food guide image (shown in app)';
+    return {title:s.title,position:s.position,icon:s.icon,body:body,active:s.active||'Y',
+            photo:s.photo||'',photoCaption:s.photoCaption||'',
+            contentType:ct,linkedList:s.linkedList||''};
+  });
+  postToSheet({action:'updateInfo',info:payload});
   leShowSaved('Info Hub saved');
   renderInfoPills(); renderInfoSections();
 }
