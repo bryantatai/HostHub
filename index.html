@@ -303,7 +303,7 @@ html,body{height:100%;background:#E5E5EA;font-family:-apple-system,BlinkMacSyste
 .sos-hdr-title{font-size:14px;font-weight:700;color:var(--label);line-height:1.3;text-align:left;}
 .sos-chev{font-size:13px;color:var(--label-3);transition:transform .2s;margin-top:2px;align-self:flex-end;}
 .sos-hdr.open .sos-chev{transform:rotate(180deg);}
-.sos-steps{display:none;padding:10px 12px 14px;border-top:.5px solid var(--sep-2);grid-column:1/-1;}
+.sos-steps{display:none;padding:6px 12px 12px;border-top:.5px solid var(--sep-2);}
 .sos-steps.open{display:block;}
 .step-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;margin-top:12px;}
 .step-row:last-child{margin-bottom:0;}
@@ -479,6 +479,24 @@ textarea.lf-input{resize:none;line-height:1.6;min-height:80px;}
 .crew-name{font-size:16px;font-weight:600;color:var(--dark);}
 .view-info-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:16px;background:var(--bg);border:1.5px solid var(--sep);border-radius:var(--r-sm);font-size:16px;font-weight:700;color:var(--dark);cursor:pointer;}
 .view-info-btn i{font-size:15px;color:var(--or-d);}
+/* Position guide — poster-style checklist */
+.pd-purpose{background:var(--or-l);border-radius:var(--r);padding:13px 15px;font-size:16px;line-height:1.6;color:var(--or-d);font-weight:600;margin-bottom:12px;display:flex;gap:8px;}
+.pd-purpose:before{content:'🧡';flex-shrink:0;}
+.pd-check-label{font-size:15px;font-weight:800;color:var(--dark);margin:2px 2px 10px;}
+.pd-check-sec{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;}
+.pd-check-sec-hdr{padding:12px 15px;background:var(--or-l);display:flex;align-items:center;gap:8px;}
+.pd-check-sec-emoji{font-size:18px;flex-shrink:0;}
+.pd-check-sec-name{font-size:16px;font-weight:800;color:var(--or-d);}
+.pd-check-items{padding:6px 15px 12px;}
+.pd-check-item{display:flex;gap:10px;padding:9px 0;border-bottom:.5px solid var(--sep-2);align-items:flex-start;}
+.pd-check-item:last-child{border-bottom:none;}
+.pd-check-box{width:20px;height:20px;border:2px solid var(--or);border-radius:6px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s;}
+.pd-check-box.checked{background:var(--or);}
+.pd-check-box.checked:after{content:'✓';color:#fff;font-size:13px;font-weight:800;}
+.pd-check-text{font-size:16px;color:var(--dark);line-height:1.5;flex:1;}
+.pd-check-box.checked+.pd-check-text{color:var(--label-3);text-decoration:line-through;}
+.pd-poster-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:15px;background:var(--or);border:none;border-radius:var(--r-sm);font-size:16px;font-weight:700;color:#fff;cursor:pointer;margin-bottom:10px;}
+.pd-poster-btn i{font-size:17px;}
 
 /* Icon font fallback: if Tabler fails to load, keep layout intact */
 i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1em;line-height:1;font-style:normal;}
@@ -528,7 +546,7 @@ i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1
       </div>
       <div class="search-wrap open" id="searchWrap">
         <i class="ti ti-search search-icon"></i>
-        <input class="search-input" id="rosterSearch" type="search" inputmode="search" name="hq-roster-search" placeholder="Search name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" oninput="renderSearch(this.value)"/>
+        <input class="search-input" id="rosterSearch" type="text" inputmode="search" name="search_hq_nofill_x9" placeholder="Search name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" readonly onfocus="this.removeAttribute('readonly')" oninput="renderSearch(this.value)"/>
       </div>
       <div id="rosterResults"></div>
       <div id="rosterGroups"></div>
@@ -556,7 +574,7 @@ i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1
     <!-- SOS -->
     <div class="page" id="page-sos">
       <div class="sos-intro"><i class="ti ti-alert-triangle"></i><p>Step-by-step protocols for anything unexpected. Know these before you go out.</p></div>
-      <div id="sosList" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+      <div id="sosList" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
 
     <!-- DEBRIEF -->
@@ -641,10 +659,10 @@ i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1
     </div>
     <div class="pd-scroll">
       <div class="pd-hero"><div class="pd-hero-icon"><i class="ti" id="pdHeroIcon"></i></div><div><div class="pd-hero-name" id="pdHeroName"></div><div class="pd-hero-sub" id="pdHeroSub"></div></div></div>
-      <div class="pd-card"><div class="pd-card-lbl">What you do</div><div class="pd-card-text" id="pdDesc"></div></div>
-      <div class="pd-tip"><i class="ti ti-bulb"></i><p id="pdTip"></p></div>
-      <div class="pd-card" id="pdCrewCard"><div class="pd-card-lbl">Who's with you today</div><div id="pdCrew"></div></div>
-      <button class="view-info-btn" onclick="goToInfoFromPD()"><i class="ti ti-book-2"></i>Read full position guide in Info Hub</button>
+      <div class="pd-purpose" id="pdPurpose"></div>
+      <div id="pdChecklist"></div>
+      <button class="pd-poster-btn" id="pdPosterBtn" style="display:none;" onclick="openPoster()"><i class="ti ti-photo"></i>View printable poster</button>
+      <div class="pd-card" id="pdCrewCard"><div class="pd-card-lbl">Who's serving with you today</div><div id="pdCrew"></div></div>
     </div>
   </div>
 
@@ -703,7 +721,12 @@ function parseCSV(text){
 // Try a tab by name — first with the exact (emoji) name, then a plain fallback name.
 // Returns parsed rows, or [] if the tab genuinely can't be read (so one bad tab
 // never blocks the others).
-async function fetchSheetTab(tabName, fallbackName){
+// Fetch a tab by name. gviz has a nasty quirk: when a sheet NAME doesn't match
+// (e.g. emoji mismatch), it silently returns the FIRST tab's CSV instead of an
+// error — so we'd get "How to use" data in place of the tab we wanted.
+// To catch that, each tab is passed a `fingerprint`: a keyword that appears in
+// that tab's row-1 banner. We only accept a result whose banner contains it.
+async function fetchSheetTab(tabName, fallbackName, fingerprint){
   var names=[tabName];
   if(fallbackName && fallbackName!==tabName) names.push(fallbackName);
   for(var i=0;i<names.length;i++){
@@ -711,10 +734,16 @@ async function fetchSheetTab(tabName, fallbackName){
       var res=await fetch(sheetCsvUrl(names[i]));
       if(!res.ok) continue;
       var text=await res.text();
-      // Google returns an HTML error page (not CSV) when the tab name doesn't match
+      // Google returns an HTML error page (not CSV) when the tab name is invalid
       if(text.indexOf('<!DOCTYPE')>-1 || text.indexOf('<html')>-1) continue;
       var rows=parseCSV(text);
-      if(rows.length) return rows;
+      if(!rows.length) continue;
+      // Guard against the silent wrong-tab fallback: check the banner fingerprint.
+      if(fingerprint){
+        var banner=(rows[0]&&rows[0][0]?rows[0][0]:'').toUpperCase();
+        if(banner.indexOf(fingerprint.toUpperCase())===-1) continue; // wrong tab — try next name
+      }
+      return rows;
     }catch(e){ /* try next name */ }
   }
   return [];
@@ -729,17 +758,17 @@ async function fetchAllFromSheet(){
   // Each tab: [emoji name, plain fallback name]. Fetched independently so one
   // failure doesn't stop the rest.
   var specs=[
-    ['📅 Today','Today'],
-    ['👥 Roster','Roster'],
-    ['📋 Info Hub','Info Hub'],
-    ['🚨 Contingencies','Contingencies'],
-    ['⭐ Quick Ref','Quick Ref'],
-    ['💬 Connect','Connect'],
-    ['✨ Wow Box','Wow Box'],
-    ['🗓 Schedule','Schedule'],
-    ['🗂 Grouped Lists','Grouped Lists'],
+    ['📅 Today','Today','TODAY'],
+    ['👥 Roster','Roster','ROSTER'],
+    ['📋 Info Hub','Info Hub','INFO HUB'],
+    ['🚨 Contingencies','Contingencies','CONTINGENCIES'],
+    ['⭐ Quick Ref','Quick Ref','QUICK REF'],
+    ['💬 Connect','Connect','CONNECT'],
+    ['✨ Wow Box','Wow Box','WOW BOX'],
+    ['🗓 Schedule','Schedule','SCHEDULE'],
+    ['🗂 Grouped Lists','Grouped Lists','GROUPED LISTS'],
   ];
-  var results=await Promise.all(specs.map(function(s){return fetchSheetTab(s[0],s[1]);}));
+  var results=await Promise.all(specs.map(function(s){return fetchSheetTab(s[0],s[1],s[2]);}));
   var anyLoaded=results.some(function(r){return r&&r.length;});
   if(!anyLoaded){
     // Nothing came back — Sheet unreachable or not shared. Keep mock/cached data.
@@ -1095,10 +1124,10 @@ var DATA = {
     {title:"Wet weather plan",position:"All",icon:"ti-cloud-rain",body:"If it rains:\n1. Alert your lead via Telegram immediately\n2. Direct guests to Entrance A (covered walkway)\n3. Retrieve umbrellas from Ground store room, left shelf\n4. Ensure Ground team covers Entrance A\n5. Check with lead before repositioning"},
     {title:"First aid",position:"All",icon:"ti-first-aid-kit",body:"First aid kits: [Location 1] and [Location 2].\n\nIf a guest is unwell:\n1. Stay \u2014 do not leave alone\n2. Guide to a quiet space\n3. Source water\n4. Radio lead: name, location, condition\n5. Do not leave until handover confirmed"},
     {title:"FAQ",position:"All",icon:"ti-help-square",body:"Q: Where is the toilet?\nA: Level 4, to the extreme left and right sides of the atrium.\n\nQ: Where do I sit?\nA: Our ushers will direct you to your seats.\n\nQ: Can I meet a pastor?\nA: Obtain more information about the request. How does he/she know the pastor, where and when. Get the requestor's name and number/email but do not promise anything. Inform the requester that we will note their request and will inform them if we have updates. Radio your lead immediately. Ensure the loop is closed later.\n\nQ: Is there parking?\nA: There is parking available at level 1. Alternatively, the nearest carparks can be found at the residental HDB blocks 414-417 or the StoreFriendly Centre building beside our church. \n\nQ: Can I bring food into the Auditorium?\nA: Yes! However, be sure to dispose your trash after.\n\nQ: Where can I get water?\nA: You may purchase mineral water from the fridges at the sides of the atrium or refill your water bottle at the water point located beside the Coffee/Barista pop up area.\n\nQ: Can I refill my waterbottle? Do you have warm water?\nA: Yes you can refill your water bottle at the water points. We should have a warm water option at the water cooler. Otherwise, please approach the Coffee/Barista pop up for some hot water if needed.\n\nQ: How can I give my offering, I don't have any SG Banking App.\nA: You may provide your offering in cash via the offering envelopes located behnd the chairs.\n\nQ: Can I take the stairs up instead of the lifts?\nA: The staircase is currently not accessible. If it gets too crowded, we will direct you to alterative lifts (i.e. cargo lifts).\n\nQ: Is there WiFi/ Can I connect to a WiFi network?\nA: Yes, we have XXXXXX(help me input the correct answer, is it QR code?)\n\nQ: Do you have a portable charger?\nA: Yes, we do have available chargers for rental that is located right opposite the baby space. \n\nQ:Is there any area with a power socket where I can charge my device?\nA: Yes, there are a few located around level 4. However, for safety we recommend that you do not leave your device unattended."},
-    {title:"Ground position guide",position:"Ground",icon:"ti-map-pin",body:"Standing position: [Exact location]\nWatch for: guests slowing down, checking phones, looking uncertain, checking the directory\nOpening line: 'Hello, are you here for GPC?'\nHandoff: Direct them to proceed to Level 4. Walk them to Lobby IC if they need further assistance\n\nTips: Ground hosts have first hand view of the crowd and lift situation. Can create the atmosphere by playing light music. Can liaise with security if needed on suspicious characters or on wet weather arrangements. Can open/hold the door for guests and/or be pro-active to press/hold the lifts as well."},
-    {title:"Lobby position guide",position:"Lobby",icon:"ti-door-enter",body:"Standing position: [Exact location]\nWatch for: guest reaction upon arrival at Level 4 e.g. pause and look around would likely mean a new delegate\nOpening line: 'Welcome! Is this your first time with us for GPC?'\nHandoff: Direct to Atrium team for seating\n\nTips: Lobby hosts have a birds eye view from level 4. Can communicate with Ground Hosts on the weather situation (e.g. clouds and whether people are holding umbrellas). Can receive identified guests from the lobby and to welcome/bring them into church. Can be the second-layer to identify any suspicious characters or lost delegates/guests."},
-    {title:"Atrium position guide",position:"Atrium",icon:"ti-layout",body:"Standing position: [Exact location]\nWatch for: darting eyes could signal a new guest. walking straight to toilet could signal a returning guest.\nOpening line: 'Welcome! Can I help you to your seat?\"\nSeating: [Section details]\n\nTips: Atrium hosts have the opportunity to create a wow-experience when they engage guests/delegates. Can be alert to any guest/delegate that needs assistance. Can liaise with ushers or helpdesk where needed, on seating or if any further assistance is needed (e.g. luggage storage, intepreter kits)."},
-    {title:"Lvl 3 position guide",position:"Lvl 3",icon:"ti-stairs",body:"Standing postion: [Exact location]\nWatch for: guests who want to \"see\" Heart Kidz/Tots but whose kids are not there\nOpening line: 'Hi, are you here to send your child to Heart Kidz? or 'Hi, are you here to pick up your child?\"\n"},
+    {title:"Ground position guide",position:"Ground",icon:"ti-map-pin",body:"PURPOSE:Create a safe, welcoming, and seamless first impression for every guest.||Warm Welcome~💜~Smile and greet warmly^Be alert to first-time visitors, walk-ins and registered guests^Assist guests who need help||Keep It Safe~🚪~Keep all doors closed when required^Watch for wet or slippery floors^Open doors for guests when needed||Manage the Lift~🛗~Send lifts up/down promptly during transition between services^Crowd control^Remind guests about uneven lift landings when necessary^For safety — do NOT use your hands to hold the lift!^If Cargo Lift is used — no parents with babies (hygiene reasons)||Communicate Early~📢~Update when the crowd reaches ⅔ capacity (include photo)^Inform Lobby of spotted guests and ensure messages are acknowledged||Coordinate Guest Care~🤝~Alert Lobby for guests with prams, wheelchairs, or mobility needs^Call for reinforcement when escorting guests upstairs||Create Atmosphere~🎵~Maintain a pleasant environment with light background music^Work with BM to set up the big fan during hot weather^Work with BM to deploy the blower during wet weather",photo:""},
+    {title:"Lobby position guide",position:"Lobby",icon:"ti-door-enter",body:"PURPOSE:Ensure a safe, welcoming, and faith-filled atmosphere for everyone.||Set the Atmosphere~💙~Warmly greet everyone^Bring FAITH and ENERGY||Watch for Guests~👀~Spot communicated guests/visitors^Escort walk-ins & guests to the Atrium^Relay Comms from Ground to crew^Inform Atrium of guest arrivals^Connect guests with the Atrium Host||Keep the Lobby Flowing~🚶~Manage traffic between services^Ensure smooth service transitions^Prevent lobby congestion^Send the lift back to Level 1^Be safe! Don't hold the lift with your hand!||Maintain Space~✨~Ensure food deliveries aren't left in the lobby||Wet Weather~🌧~Set up towels, spare shirts & socks^Offer umbrella sleeves^Spot drenched members & visitors and offer a change of clothing||Hot Weather~☀️~Set up tissues & refreshers^Ensure a comfortable temperature",photo:""},
+    {title:"Atrium position guide",position:"Atrium",icon:"ti-layout",body:"PURPOSE:Engage and create experience.||Engagement~🚶~Closed loop for guests' comms from lobby^Updated guest tracker^Communicate with Usher not to shift walk-in guests^Handover to Connect/Global PIC^Share guest final updates with HM/HS||Experience~💙~Create experience, bring delight^Look out for invisible signs||Work with Other Ministries~🤝~Ensure Baby Space is checked before and during service^Be aware of Connect and Fly-in list^Ensure 2 hosts support Audi doors after P&W begins||Update Guest Info Timely~📱~Know where Atrium hosts are, deploy to engage when needed^Close the loop with Lobby on potential walk-ins^Inform HM/HS when guests arrive",photo:""},
+    {title:"Baby Space guide",position:"Lvl 3",icon:"ti-baby-carriage",body:"PURPOSE:Create a comfortable environment for parents and babies.||Comfortable Environment~💙~Look out for parents and babies^Ensure parents have enough seats^TV, sound, water dispenser & bottle warmer in operation^Queue post and rattan divider set up||Engagement~🚶~Look out for walk-ins^Fond farewell for walk-ins",photo:""},
     {title:"Lvl 6 position guide",position:"Lvl 6",icon:"ti-stairs",body:"Standing postion: [Exact location]\nWatch for: guests who are lost at level 6\nOpening line: 'Hi, are you here for GPC?\""},
     {title:"The Hub position guide",position:"The Hub",icon:"ti-home",body:"Standing postion: [Exact location]\nWatch for: guests who are not wearing any delegate or host tag\nOpening line: 'Welcome to The Hub!\""},
     {title:"Under Atrium guide",position:"Under Atrium",icon:"ti-box-align-bottom",body:"Standing postion: [Exact location]\nWatch for: guests who are not wearing any delegate or host tag\nOpening line: 'Hello! May I help you find what you are looking for?\""},
@@ -1194,6 +1223,8 @@ var S={
   leadUnlocked:false, icUnlocked:false,
   wowCat:null,
   groupCat:{},
+  checkState:{},
+  posterUrl:'',
   // debrief state
   debriefDay:TODAY_IDX, debriefSess:null, // null = day landing
   pcTarget:null, // 'lead' | 'ic' | 'debrief_ic' | 'debrief_lead'
@@ -1581,6 +1612,10 @@ function renderInfoSections(){
       bodyHtml=renderGroupedList('wow-box', i);
     } else if(s.body==='__foodguide__'){
       bodyHtml=renderFoodGuide();
+    } else if(s.body && s.body.indexOf('PURPOSE:')===0 && s.body.indexOf('~')>-1){
+      // Encoded position-guide checklist — render as poster-style cards
+      var parsed=parseChecklist(s.body);
+      bodyHtml=(parsed.purpose?'<div class="pd-purpose">'+esc(parsed.purpose)+'</div>':'')+renderChecklist(parsed,s.position||s.title)+photoHtml(s.photo,s.photoCaption);
     } else {
       bodyHtml='<div class="info-body-text">'+esc(s.body)+'</div>'+photoHtml(s.photo,s.photoCaption);
     }
@@ -1644,7 +1679,7 @@ function toggleGroupCat(sectionIdx,i){
 // ── SOS ───────────────────────────────────────────────────────────────────────
 function renderSOS(){
   var el=document.getElementById('sosList');
-  // Each scenario = a tile. Steps panel sits OUTSIDE the grid (spans full width).
+  // Single-column accordion: each scenario's steps expand directly beneath it.
   var html='';
   DATA.sos.forEach(function(item,i){
     html+=
@@ -1654,23 +1689,14 @@ function renderSOS(){
           '<span class="sos-hdr-title">'+esc(item.scenario)+'</span>'+
           '<i class="ti ti-chevron-down sos-chev"></i>'+
         '</button>'+
+        '<div class="sos-steps" id="ss'+i+'">'+
+          item.steps.map(function(s,si){
+            return '<div class="step-row"><div class="step-num">'+(si+1)+'</div><div class="step-text">'+esc(s)+'</div></div>';
+          }).join('')+
+        '</div>'+
       '</div>';
   });
   el.innerHTML=html;
-  // Append step panels AFTER the grid (they span full width via a wrapper)
-  var wrapper=document.createElement('div');
-  wrapper.style.cssText='margin-top:0;';
-  DATA.sos.forEach(function(item,i){
-    var panel=document.createElement('div');
-    panel.className='sos-steps';
-    panel.id='ss'+i;
-    panel.style.cssText='border-radius:var(--r);background:var(--card);box-shadow:var(--shadow);margin-top:8px;display:none;';
-    panel.innerHTML=item.steps.map(function(s,si){
-      return '<div class="step-row"><div class="step-num">'+(si+1)+'</div><div class="step-text">'+esc(s)+'</div></div>';
-    }).join('');
-    wrapper.appendChild(panel);
-  });
-  el.parentNode.insertBefore(wrapper,el.nextSibling);
 }
 function toggleSOS(i){
   // Close all others
@@ -1679,13 +1705,13 @@ function toggleSOS(i){
     var h=document.getElementById('sh'+idx);
     var s=document.getElementById('ss'+idx);
     if(h) h.classList.remove('open');
-    if(s) s.style.display='none';
+    if(s) s.classList.remove('open');
   });
   var h=document.getElementById('sh'+i);
   var s=document.getElementById('ss'+i);
   if(!h||!s) return;
   var isOpen=h.classList.toggle('open');
-  s.style.display=isOpen?'block':'none';
+  s.classList.toggle('open',isOpen);
 }
 
 // ── DEBRIEF ───────────────────────────────────────────────────────────────────
@@ -2253,16 +2279,87 @@ function openPD(id){
   document.getElementById('pdHeroIcon').className='ti '+p.icon;
   document.getElementById('pdHeroName').textContent=p.name;
   document.getElementById('pdHeroSub').textContent=p.sub;
-  document.getElementById('pdDesc').textContent=p.desc;
-  document.getElementById('pdTip').textContent=p.tip;
-  var crew=DATA.roster.filter(function(r){return r.day===TODAY_DATE&&r.position===p.name;});
+
+  // Find the matching position guide from Info Hub (by position name)
+  var guide=DATA.info.find(function(s){
+    return s.position===p.name && s.title && s.title.toLowerCase().indexOf('guide')>-1;
+  });
+  var purposeEl=document.getElementById('pdPurpose');
+  var checkEl=document.getElementById('pdChecklist');
+  var posterBtn=document.getElementById('pdPosterBtn');
+  if(guide){
+    var parsed=parseChecklist(guide.body);
+    purposeEl.textContent=parsed.purpose;
+    purposeEl.style.display=parsed.purpose?'flex':'none';
+    checkEl.innerHTML=renderChecklist(parsed,p.name);
+    // Poster image: stored in the guide's photo field (Drive link from Sheet)
+    S.posterUrl=guide.photo||'';
+    posterBtn.style.display=S.posterUrl?'flex':'none';
+  } else {
+    purposeEl.style.display='none';
+    checkEl.innerHTML='<div class="pd-card"><div class="pd-card-text" style="color:var(--label-3);">No guide set for this position yet.</div></div>';
+    posterBtn.style.display='none';
+  }
+
+  // Who's serving with you today — match day AND session
+  var crew=DATA.roster.filter(function(r){
+    return r.day===TODAY_DATE && r.position===p.name && (!S.session||r.session===S.session);
+  });
   var cc=document.getElementById('pdCrewCard');
-  if(crew.length){document.getElementById('pdCrew').innerHTML=crew.map(function(r){var ini=r.name.split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();return '<div class="crew-row"><div class="crew-av">'+ini+'</div><div class="crew-name">'+esc(r.name)+'</div></div>';}).join('');cc.style.display='block';}
+  if(crew.length){
+    document.getElementById('pdCrew').innerHTML=crew.map(function(r){
+      var ini=r.name.split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();
+      var isMe=r.name===S.name;
+      return '<div class="crew-row"><div class="crew-av">'+ini+'</div><div class="crew-name">'+esc(r.name)+(isMe?' <span style="color:var(--or-d);font-weight:700;">(you)</span>':'')+(r.role?' <span style="font-size:13px;color:var(--label-3);">· '+esc(r.role)+'</span>':'')+'</div></div>';
+    }).join('');
+    cc.style.display='block';
+  }
   else cc.style.display='none';
   document.getElementById('posDetail').classList.add('open');
+  document.querySelector('.pd-scroll').scrollTop=0;
 }
-function closePD(){document.getElementById('posDetail').classList.remove('open');}
-function goToInfoFromPD(){var p=DATA.positions.find(function(x){return x.id===S.posId;});if(!p)return;S.infoFilter=p.name;closePD();renderInfoPills();renderInfoSections();switchTab('info');setTimeout(function(){document.querySelectorAll('.info-title').forEach(function(t,i){if(t.textContent.toLowerCase().indexOf('position guide')>-1)toggleInfo(i);});},150);}
+// Parse the encoded guide body: "PURPOSE:x||Section~emoji~item^item||..."
+function parseChecklist(body){
+  var out={purpose:'',sections:[]};
+  if(!body) return out;
+  var parts=body.split('||');
+  parts.forEach(function(part){
+    if(part.indexOf('PURPOSE:')===0){ out.purpose=part.substring(8); return; }
+    var seg=part.split('~');
+    if(seg.length>=3){
+      out.sections.push({name:seg[0],emoji:seg[1],items:seg[2].split('^').filter(Boolean)});
+    }
+  });
+  return out;
+}
+function renderChecklist(parsed,posName){
+  if(!parsed.sections.length){
+    // Not an encoded checklist — show as plain text
+    return '<div class="pd-card"><div class="pd-card-text">'+esc(parsed.purpose||'')+'</div></div>';
+  }
+  var html='<div class="pd-check-label">Have I…?</div>';
+  parsed.sections.forEach(function(sec,si){
+    html+='<div class="pd-check-sec">'+
+      '<div class="pd-check-sec-hdr"><span class="pd-check-sec-emoji">'+sec.emoji+'</span><span class="pd-check-sec-name">'+esc(sec.name)+'</span></div>'+
+      '<div class="pd-check-items">'+
+        sec.items.map(function(it,ii){
+          var key=posName+'_'+si+'_'+ii;
+          var checked=(S.checkState&&S.checkState[key])?' checked':'';
+          return '<div class="pd-check-item"><div class="pd-check-box'+checked+'" onclick="toggleCheck(\''+key.replace(/'/g,"")+'\',this)"></div><div class="pd-check-text">'+esc(it)+'</div></div>';
+        }).join('')+
+      '</div>'+
+    '</div>';
+  });
+  return html;
+}
+function toggleCheck(key,el){
+  if(!S.checkState) S.checkState={};
+  S.checkState[key]=!S.checkState[key];
+  el.classList.toggle('checked',S.checkState[key]);
+}
+function openPoster(){
+  if(S.posterUrl) openLightbox(photoUrl(S.posterUrl));
+}
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
 function switchTab(t){
