@@ -2391,12 +2391,27 @@ function openPD(id){
 }
 function closePD(){document.getElementById('posDetail').classList.remove('open');S.posId=null;S.posSlide=0;S.posTouchX=null;}
 
-function driveImageUrl(url){
+function driveFileId(url){
   url=String(url||'').trim();
-  if(!url)return '';
-  if(url.indexOf('drive.google.com')===-1)return url;
-  var match=url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)||url.match(/[?&]id=([a-zA-Z0-9_-]+)/)||url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match?'https://drive.google.com/thumbnail?id='+encodeURIComponent(match[1])+'&sz=w1600':url;
+  var m=url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)||url.match(/[?&]id=([a-zA-Z0-9_-]+)/)||url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return m?m[1]:'';
+}
+// Ordered URL formats to try for a Drive image. The lh3.googleusercontent.com
+// endpoint is currently the most reliable for hotlinking public Drive files;
+// the thumbnail and uc endpoints are fallbacks. If one fails, the <img> onerror
+// handler advances to the next before finally showing the "check sharing" message.
+function driveImageCandidates(url){
+  var id=driveFileId(url);
+  if(!id) return [String(url||'').trim()];
+  return [
+    'https://lh3.googleusercontent.com/d/'+id+'=w1600',
+    'https://drive.google.com/thumbnail?id='+id+'&sz=w1600',
+    'https://drive.google.com/uc?export=view&id='+id
+  ];
+}
+function driveImageUrl(url){
+  var c=driveImageCandidates(url);
+  return c[0]||'';
 }
 
 function renderPositionGallery(position){
@@ -2410,7 +2425,9 @@ function renderPositionGallery(position){
   var html='<div class="pg-carousel" id="pgCarousel">';
   html+='<div class="pg-track" id="pgTrack" style="transform:translateX(-'+(S.posSlide*100)+'%);">';
   images.forEach(function(image,i){
-    html+='<div class="pg-slide"><img '+(i?'loading="lazy"':'')+' draggable="false" src="'+esc(driveImageUrl(image.url))+'" alt="'+esc(image.alt||position.name+' guide '+(i+1))+'" onerror="galleryPhotoFail(this)"/></div>';
+    var cands=driveImageCandidates(image.url);
+    var candAttr=esc(JSON.stringify(cands));
+    html+='<div class="pg-slide"><img '+(i?'loading="lazy"':'')+' draggable="false" src="'+esc(cands[0]||'')+'" data-cands=\''+candAttr+'\' data-ci="0" alt="'+esc(image.alt||position.name+' guide '+(i+1))+'" onerror="galleryPhotoFail(this)"/></div>';
   });
   html+='</div>';
   if(images.length>1){
@@ -2435,7 +2452,19 @@ function setPositionSlide(index){
   S.posSlide=Math.max(0,Math.min(index,images.length-1));renderPositionGallery(p);
 }
 function movePositionSlide(direction){setPositionSlide(S.posSlide+direction);}
-function galleryPhotoFail(img){img.parentNode.innerHTML='<div class="pg-fail">Image could not load. Check the Drive file is shared as “Anyone with the link”.</div>';}
+function galleryPhotoFail(img){
+  // Try the next URL format before showing the error.
+  try{
+    var cands=JSON.parse(img.getAttribute('data-cands')||'[]');
+    var ci=parseInt(img.getAttribute('data-ci')||'0',10)+1;
+    if(cands[ci]){
+      img.setAttribute('data-ci',String(ci));
+      img.src=cands[ci];
+      return;
+    }
+  }catch(e){}
+  img.parentNode.innerHTML='<div class="pg-fail">Image could not load. Open the Drive file, click Share, and set “General access” to <b>Anyone with the link — Viewer</b>. Then press Sync.</div>';
+}
 // Parse the encoded guide body: "PURPOSE:x||Section~emoji~item^item||..."
 function parseChecklist(body){
   var out={purpose:'',sections:[]};
@@ -2496,31 +2525,30 @@ function switchTab(t){
 // Leads can paste the normal "Share > Copy link" URL — no special steps needed.
 function photoUrl(raw){
   if(!raw) return '';
-  var u=raw.trim();
-  if(!u) return '';
-  // https://drive.google.com/file/d/FILE_ID/view?usp=sharing
-  var m=u.match(/drive\.google\.com\/file\/d\/([^\/\?]+)/);
-  if(m&&m[1]) return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000';
-  // https://drive.google.com/open?id=FILE_ID  or  ...uc?id=FILE_ID
-  var m2=u.match(/drive\.google\.com\/.*[?&]id=([^&]+)/);
-  if(m2&&m2[1]) return 'https://drive.google.com/thumbnail?id='+m2[1]+'&sz=w1000';
-  // Google Photos / Drive usercontent / any direct image URL — use as-is
-  return u;
+  var c=driveImageCandidates(raw.trim());
+  return c[0]||'';
 }
 function photoHtml(raw,caption){
-  var src=photoUrl(raw);
-  if(!src) return '';
+  if(!raw||!raw.trim()) return '';
+  var cands=driveImageCandidates(raw.trim());
+  var candAttr=esc(JSON.stringify(cands));
   return '<div class="photo-wrap loading">'+
-    '<img src="'+esc(src)+'" alt="'+esc(caption||'Photo')+'" loading="lazy" '+
+    '<img src="'+esc(cands[0]||'')+'" data-cands=\''+candAttr+'\' data-ci="0" alt="'+esc(caption||'Photo')+'" loading="lazy" '+
       'onclick="openLightbox(this.src)" '+
       'onload="this.parentNode.classList.remove(\'loading\')" '+
       'onerror="photoFail(this)"/>'+
   '</div>'+(caption?'<div class="photo-cap">'+esc(caption)+'</div>':'');
 }
 function photoFail(img){
+  // Try next candidate URL format before showing the error.
+  try{
+    var cands=JSON.parse(img.getAttribute('data-cands')||'[]');
+    var ci=parseInt(img.getAttribute('data-ci')||'0',10)+1;
+    if(cands[ci]){ img.setAttribute('data-ci',String(ci)); img.src=cands[ci]; return; }
+  }catch(e){}
   var w=img.parentNode;
   w.classList.remove('loading');
-  w.outerHTML='<div class="photo-fail">Photo couldn\'t load. Check the link is shared as "Anyone with the link".</div>';
+  w.outerHTML='<div class="photo-fail">Photo couldn\'t load. Set the Drive file to "Anyone with the link — Viewer", then press Sync.</div>';
 }
 function openLightbox(src){
   var lb=document.getElementById('lightbox');
