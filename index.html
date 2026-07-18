@@ -462,6 +462,18 @@ textarea.lf-input{resize:none;line-height:1.6;min-height:80px;}
 .pd-icon{font-size:24px;color:var(--or);}
 .pd-scroll{flex:1;overflow-y:auto;padding:14px;}
 .pd-scroll::-webkit-scrollbar{display:none;}
+.pg-carousel{position:relative;width:100%;height:calc(100vh - 155px);min-height:420px;background:#111;border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow);touch-action:pan-y;user-select:none;}
+.pg-track{height:100%;display:flex;transition:transform .28s cubic-bezier(.32,.72,0,1);will-change:transform;}
+.pg-slide{min-width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#111;}
+.pg-slide img{display:block;width:100%;height:100%;object-fit:contain;-webkit-user-drag:none;}
+.pg-fail{color:#fff;font-size:15px;line-height:1.6;text-align:center;padding:30px;max-width:300px;}
+.pg-nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,.48);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;backdrop-filter:blur(5px);}
+.pg-nav.prev{left:10px}.pg-nav.next{right:10px}.pg-nav:disabled{opacity:.2;pointer-events:none}.pg-nav i{font-size:21px;}
+.pg-counter{position:absolute;right:12px;bottom:14px;background:rgba(0,0,0,.62);color:#fff;padding:6px 10px;border-radius:18px;font-size:13px;font-weight:800;letter-spacing:.2px;z-index:2;}
+.pg-dots{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;z-index:2;}
+.pg-dot{width:7px;height:7px;border-radius:50%;border:none;padding:0;background:rgba(255,255,255,.45);cursor:pointer;}.pg-dot.active{background:#fff;transform:scale(1.25);}
+.pg-empty{height:calc(100vh - 155px);min-height:420px;background:var(--card);border-radius:var(--r-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;color:var(--label-2);box-shadow:var(--shadow);}
+.pg-empty i{font-size:38px;color:var(--sep);margin-bottom:12px}.pg-empty p{font-size:16px;line-height:1.6;max-width:260px;}
 .pd-hero{background:var(--or);border-radius:var(--r-lg);padding:18px;margin-bottom:12px;display:flex;align-items:center;gap:14px;}
 .pd-hero-icon{width:52px;height:52px;background:rgba(255,255,255,.2);border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .pd-hero-icon i{font-size:26px;color:var(--card);}
@@ -657,13 +669,7 @@ i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1
       <span class="pd-name" id="pdName"></span>
       <i class="ti pd-icon" id="pdIcon"></i>
     </div>
-    <div class="pd-scroll">
-      <div class="pd-hero"><div class="pd-hero-icon"><i class="ti" id="pdHeroIcon"></i></div><div><div class="pd-hero-name" id="pdHeroName"></div><div class="pd-hero-sub" id="pdHeroSub"></div></div></div>
-      <div class="pd-purpose" id="pdPurpose"></div>
-      <div id="pdChecklist"></div>
-      <button class="pd-poster-btn" id="pdPosterBtn" style="display:none;" onclick="openPoster()"><i class="ti ti-photo"></i>View printable poster</button>
-      <div class="pd-card" id="pdCrewCard"><div class="pd-card-lbl">Who's serving with you today</div><div id="pdCrew"></div></div>
-    </div>
+    <div class="pd-scroll"><div id="pdGallery"></div></div>
   </div>
 
 
@@ -766,6 +772,7 @@ async function fetchAllFromSheet(){
     ['✨ Wow Box','Wow Box','WOW BOX'],
     ['🗓 Schedule','Schedule','SCHEDULE'],
     ['🗂 Grouped Lists','Grouped Lists','GROUPED LISTS'],
+    ['🖼 Position Guides','Position Guides','POSITION GUIDES'],
   ];
   var fetches=[
     Promise.all(specs.map(function(s){return fetchSheetTab(s[0],s[1],s[2]);})),
@@ -839,7 +846,7 @@ function parseSheetData(results){
   var CONTENT_START_INDEX=3;
   var todayRows=results[0], rosterRows=results[1], infoRows=results[2],
       sosRows=results[3], qrRows=results[4], connectRows=results[5], wowRows=results[6],
-      schedRows=results[7]||[], groupedRows=results[8]||[];
+      schedRows=results[7]||[], groupedRows=results[8]||[], positionGuideRows=results[9]||[];
 
   // ── TODAY tab ─────────────────────────────────────────────────────────────
   if(todayRows && todayRows.length){
@@ -896,6 +903,7 @@ function parseSheetData(results){
   var newInfo=[];
   infoRows.slice(CONTENT_START_INDEX).forEach(function(r){
     if(!r[0]||r[4]==='N')return;
+    if(r[0].trim().toLowerCase().indexOf('position guide')>-1)return; // image-only guides now live in Position Guides
     var contentType=(r[7]||'text').trim();
     var linkedList=(r[8]||'').trim();
     var entry={
@@ -942,6 +950,19 @@ function parseSheetData(results){
     newSched[day].push({time:(r[1]||'').trim(),item:r[2].trim(),type:(r[3]||'normal').trim(),note:(r[4]||'').trim(),photo:(r[6]||'').trim(),active:'Y'});
   });
   if(Object.keys(newSched).length) DATA.schedule=newSched;
+
+  // ── POSITION GUIDES tab ──────────────────────────────────────────────────
+  // Cols: Position | Image URL | Alt text | Sort order | Active
+  // One row is one swipe page. Google Drive sharing links are converted when rendered.
+  var newPositionGuides={};
+  positionGuideRows.slice(CONTENT_START_INDEX).forEach(function(r){
+    if(!r[0]||!r[1]||String(r[4]||'Y').toUpperCase()==='N')return;
+    var position=r[0].trim();
+    if(!newPositionGuides[position])newPositionGuides[position]=[];
+    newPositionGuides[position].push({url:r[1].trim(),alt:(r[2]||position+' position guide').trim(),sort:parseFloat(r[3])||0});
+  });
+  Object.keys(newPositionGuides).forEach(function(position){newPositionGuides[position].sort(function(a,b){return a.sort-b.sort;});});
+  DATA.positionGuides=newPositionGuides;
 
   // Re-render current view
   renderAll();
@@ -1147,6 +1168,7 @@ var DATA = {
     {name:"Charmaine Grace Ang",day:"Mon 27 Jul",session:"S2",position:"Unassigned",role:"",time:"12:00 PM \u2013 7:00PM",team:"Reinforcement",remarks:"",pairGroup:"",active:"Y"},
     {name:"Alexander Tai",day:"Mon 27 Jul",session:"S2",position:"Unassigned",role:"",time:"12:00 PM \u2013 7:00PM",team:"Reinforcement",remarks:"",pairGroup:"",active:"Y"},
   ],
+  positionGuides:{},
   positions:[
     {id:'ground',       name:'Ground',        icon:'ti-map-pin',       sub:'First contact · Outside',     desc:'You are the first face delegates see. Stand at the main entrance and step in before they have to figure out what to do.',tip:'Darting eyes = new guest. Beeline to toilet = returning. A warm hello is all it takes.'},
     {id:'lobby',        name:'Lobby',         icon:'ti-door-enter',    sub:'Entry layer · Inside',        desc:'Watch the lobby reaction. Amazement = first timer. Straight walk = returning delegate.',tip:'Step in before they have to figure out what to do.'},
@@ -1255,6 +1277,7 @@ var DATA = {
 var S={
   tab:'today', name:null, session:null, pickerSess:null, pickerDay:0, schedOpen:true,
   infoFilter:'All', posId:null, leadTab:'today',
+  posSlide:0,posTouchX:null,
   leadUnlocked:false, icUnlocked:false,
   wowCat:null,
   groupCat:{},
@@ -1623,13 +1646,16 @@ function addCal(pos,day,time){window.open('https://calendar.google.com/calendar/
 
 // ── INFO HUB ──────────────────────────────────────────────────────────────────
 function renderInfoPills(){
-  var pos=['All'];DATA.info.forEach(function(s){if(pos.indexOf(s.position)===-1)pos.push(s.position);});
+  var pos=['All'];DATA.info.forEach(function(s){if(s.title&&s.title.toLowerCase().indexOf('position guide')>-1)return;if(pos.indexOf(s.position)===-1)pos.push(s.position);});
   document.getElementById('infoPills').innerHTML=pos.map(function(p){return '<button class="fpill'+(S.infoFilter===p?' active':'')+'" onclick="setInfoFilter(\''+p.replace(/'/g,"\\'")+'\')">'+esc(p)+'</button>';}).join('');
 }
 function setInfoFilter(p){S.infoFilter=p;renderInfoPills();renderInfoSections();}
 function renderInfoSections(){
   var el=document.getElementById('infoSections');el.innerHTML='';
-  var filtered=DATA.info.filter(function(s){return S.infoFilter==='All'?true:s.position===S.infoFilter||s.position==='All';});
+  var filtered=DATA.info.filter(function(s){
+    if(s.title&&s.title.toLowerCase().indexOf('position guide')>-1)return false;
+    return S.infoFilter==='All'?true:s.position===S.infoFilter||s.position==='All';
+  });
   filtered.forEach(function(s,i){
     var div=document.createElement('div');div.className='info-row';
     var bodyHtml;
@@ -1665,7 +1691,11 @@ function renderQuickRef(){
     return row;
   }).join('');
 }
-function goToMyPos(){var myRow=getMyRow();if(!myRow)return;S.infoFilter=myRow.position;renderInfoPills();renderInfoSections();setTimeout(function(){document.querySelectorAll('.info-title').forEach(function(t,i){if(t.textContent.toLowerCase().indexOf('position guide')>-1)toggleInfo(i);});},100);switchTab('info');}
+function goToMyPos(){
+  var myRow=getMyRow();if(!myRow)return;
+  var position=DATA.positions.find(function(p){return p.name===myRow.position;});
+  if(position)openPD(position.id);
+}
 
 // ── WOW BOX ───────────────────────────────────────────────────────────────────
 function renderFoodGuide(){
@@ -2352,50 +2382,60 @@ function saveLConnect(){
 function openPD(id){
   if(!id)return;var p=DATA.positions.find(function(x){return x.id===id;});if(!p)return;
   S.posId=id;
+  S.posSlide=0;
   document.getElementById('pdName').textContent=p.name;
   document.getElementById('pdIcon').className='ti '+p.icon+' pd-icon';
-  document.getElementById('pdHeroIcon').className='ti '+p.icon;
-  document.getElementById('pdHeroName').textContent=p.name;
-  document.getElementById('pdHeroSub').textContent=p.sub;
-
-  // Find the matching position guide from Info Hub (by position name)
-  var guide=DATA.info.find(function(s){
-    return s.position===p.name && s.title && s.title.toLowerCase().indexOf('guide')>-1;
-  });
-  var purposeEl=document.getElementById('pdPurpose');
-  var checkEl=document.getElementById('pdChecklist');
-  var posterBtn=document.getElementById('pdPosterBtn');
-  if(guide){
-    var parsed=parseChecklist(guide.body);
-    purposeEl.textContent=parsed.purpose;
-    purposeEl.style.display=parsed.purpose?'flex':'none';
-    checkEl.innerHTML=renderChecklist(parsed,p.name);
-    // Poster image: stored in the guide's photo field (Drive link from Sheet)
-    S.posterUrl=guide.photo||'';
-    posterBtn.style.display=S.posterUrl?'flex':'none';
-  } else {
-    purposeEl.style.display='none';
-    checkEl.innerHTML='<div class="pd-card"><div class="pd-card-text" style="color:var(--label-3);">No guide set for this position yet.</div></div>';
-    posterBtn.style.display='none';
-  }
-
-  // Who's serving with you today — match day AND session
-  var crew=DATA.roster.filter(function(r){
-    return r.day===TODAY_DATE && r.position===p.name && (!S.session||r.session===S.session);
-  });
-  var cc=document.getElementById('pdCrewCard');
-  if(crew.length){
-    document.getElementById('pdCrew').innerHTML=crew.map(function(r){
-      var ini=r.name.split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();
-      var isMe=r.name===S.name;
-      return '<div class="crew-row"><div class="crew-av">'+ini+'</div><div class="crew-name">'+esc(r.name)+(isMe?' <span style="color:var(--or-d);font-weight:700;">(you)</span>':'')+(r.role?' <span style="font-size:13px;color:var(--label-3);">· '+esc(r.role)+'</span>':'')+'</div></div>';
-    }).join('');
-    cc.style.display='block';
-  }
-  else cc.style.display='none';
+  renderPositionGallery(p);
   document.getElementById('posDetail').classList.add('open');
   document.querySelector('.pd-scroll').scrollTop=0;
 }
+function closePD(){document.getElementById('posDetail').classList.remove('open');S.posId=null;S.posSlide=0;S.posTouchX=null;}
+
+function driveImageUrl(url){
+  url=String(url||'').trim();
+  if(!url)return '';
+  if(url.indexOf('drive.google.com')===-1)return url;
+  var match=url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)||url.match(/[?&]id=([a-zA-Z0-9_-]+)/)||url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return match?'https://drive.google.com/thumbnail?id='+encodeURIComponent(match[1])+'&sz=w1600':url;
+}
+
+function renderPositionGallery(position){
+  var images=(DATA.positionGuides&&DATA.positionGuides[position.name])||[];
+  var host=document.getElementById('pdGallery');
+  if(!images.length){
+    host.innerHTML='<div class="pg-empty"><i class="ti ti-photo-off"></i><p>No guide images yet. Add image links for '+esc(position.name)+' in the Position Guides sheet.</p></div>';
+    return;
+  }
+  if(S.posSlide>=images.length)S.posSlide=images.length-1;
+  var html='<div class="pg-carousel" id="pgCarousel">';
+  html+='<div class="pg-track" id="pgTrack" style="transform:translateX(-'+(S.posSlide*100)+'%);">';
+  images.forEach(function(image,i){
+    html+='<div class="pg-slide"><img '+(i?'loading="lazy"':'')+' draggable="false" src="'+esc(driveImageUrl(image.url))+'" alt="'+esc(image.alt||position.name+' guide '+(i+1))+'" onerror="galleryPhotoFail(this)"/></div>';
+  });
+  html+='</div>';
+  if(images.length>1){
+    html+='<button class="pg-nav prev" onclick="movePositionSlide(-1)" '+(S.posSlide===0?'disabled':'')+' aria-label="Previous image"><i class="ti ti-chevron-left"></i></button>';
+    html+='<button class="pg-nav next" onclick="movePositionSlide(1)" '+(S.posSlide===images.length-1?'disabled':'')+' aria-label="Next image"><i class="ti ti-chevron-right"></i></button>';
+    html+='<div class="pg-dots">'+images.map(function(_,i){return '<button class="pg-dot'+(i===S.posSlide?' active':'')+'" onclick="setPositionSlide('+i+')" aria-label="Image '+(i+1)+'"></button>';}).join('')+'</div>';
+  }
+  html+='<div class="pg-counter">'+(S.posSlide+1)+' / '+images.length+'</div></div>';
+  host.innerHTML=html;
+  var carousel=document.getElementById('pgCarousel');
+  carousel.addEventListener('touchstart',function(e){S.posTouchX=e.changedTouches[0].clientX;},{passive:true});
+  carousel.addEventListener('touchend',function(e){
+    if(S.posTouchX==null)return;
+    var delta=e.changedTouches[0].clientX-S.posTouchX;S.posTouchX=null;
+    if(Math.abs(delta)>45)movePositionSlide(delta<0?1:-1);
+  },{passive:true});
+}
+
+function setPositionSlide(index){
+  var p=DATA.positions.find(function(x){return x.id===S.posId;});if(!p)return;
+  var images=(DATA.positionGuides&&DATA.positionGuides[p.name])||[];
+  S.posSlide=Math.max(0,Math.min(index,images.length-1));renderPositionGallery(p);
+}
+function movePositionSlide(direction){setPositionSlide(S.posSlide+direction);}
+function galleryPhotoFail(img){img.parentNode.innerHTML='<div class="pg-fail">Image could not load. Check the Drive file is shared as “Anyone with the link”.</div>';}
 // Parse the encoded guide body: "PURPOSE:x||Section~emoji~item^item||..."
 function parseChecklist(body){
   var out={purpose:'',sections:[]};
