@@ -755,6 +755,8 @@ async function fetchAllFromSheet(){
 }
 
 function parseSheetData(results){
+  // Rows 1-2 contain guidance, row 3 contains headers, and content starts at row 4.
+  var CONTENT_START_INDEX=3;
   var todayRows=results[0], rosterRows=results[1], infoRows=results[2],
       sosRows=results[3], qrRows=results[4], connectRows=results[5], wowRows=results[6],
       schedRows=results[7]||[];
@@ -762,7 +764,7 @@ function parseSheetData(results){
   // ── TODAY tab ─────────────────────────────────────────────────────────────
   if(todayRows && todayRows.length){
     var todayMap={};
-    todayRows.slice(1).forEach(function(r){if(r[0])todayMap[r[0].trim()]=r[1]||'';});
+    todayRows.slice(CONTENT_START_INDEX).forEach(function(r){if(r[0])todayMap[r[0].trim()]=r[1]||'';});
     if(todayMap.day_label) DATA.today.dayLabel=todayMap.day_label;
     if(todayMap.motd)      DATA.today.motd=todayMap.motd;
     DATA.today.alerts=[todayMap.alert_1,todayMap.alert_2,todayMap.alert_3].filter(Boolean);
@@ -771,7 +773,7 @@ function parseSheetData(results){
   // ── ROSTER tab ────────────────────────────────────────────────────────────
   // Cols: Name | Day | Session | Position | Role | Time slot | Team | Remarks | Pair group | Active
   var newRoster=[];
-  rosterRows.slice(1).forEach(function(r){
+  rosterRows.slice(CONTENT_START_INDEX).forEach(function(r){
     if(!r[0]||r[9]==='N')return;
     newRoster.push({
       name:r[0].trim(), day:r[1].trim(), session:r[2].trim(),
@@ -784,7 +786,7 @@ function parseSheetData(results){
   // ── INFO HUB tab ─────────────────────────────────────────────────────────
   // Cols: Section title | Position | Icon keyword | Body text | Active
   var newInfo=[];
-  infoRows.slice(1).forEach(function(r){
+  infoRows.slice(CONTENT_START_INDEX).forEach(function(r){
     if(!r[0]||r[4]==='N')return;
     newInfo.push({title:r[0].trim(),position:r[1].trim()||'All',icon:r[2].trim(),body:r[3].trim(),photo:(r[5]||'').trim(),photoCaption:(r[6]||'').trim()});
   });
@@ -795,7 +797,7 @@ function parseSheetData(results){
   // ── SOS / CONTINGENCIES tab ───────────────────────────────────────────────
   // Cols: Scenario | Icon keyword | Steps (line-separated) | Active
   var newSos=[];
-  sosRows.slice(1).forEach(function(r){
+  sosRows.slice(CONTENT_START_INDEX).forEach(function(r){
     if(!r[0]||r[3]==='N')return;
     newSos.push({
       scenario:r[0].trim(), icon:r[1].trim(),
@@ -807,7 +809,7 @@ function parseSheetData(results){
   // ── QUICK REF tab ─────────────────────────────────────────────────────────
   // Cols: Label | Value | Active
   var newQr=[];
-  qrRows.slice(1).forEach(function(r){
+  qrRows.slice(CONTENT_START_INDEX).forEach(function(r){
     if(!r[0]||r[2]==='N')return;
     newQr.push({label:r[0].trim(),value:r[1].trim(),photo:(r[3]||'').trim()});
   });
@@ -816,7 +818,7 @@ function parseSheetData(results){
   // ── CONNECT tab ───────────────────────────────────────────────────────────
   // Cols: Chat name | Description | Duty day | Telegram invite URL | Active
   var newConnect=[];
-  connectRows.slice(1).forEach(function(r){
+  connectRows.slice(CONTENT_START_INDEX).forEach(function(r){
     if(!r[0]||r[4]==='N')return;
     newConnect.push({label:r[0].trim(),desc:r[1].trim(),day:r[2].trim(),url:r[3].trim()});
   });
@@ -826,7 +828,7 @@ function parseSheetData(results){
   // Cols: Category | Icon keyword | Item name | Active
   var wowMap={};
   var wowOrder=[];
-  wowRows.slice(1).forEach(function(r){
+  wowRows.slice(CONTENT_START_INDEX).forEach(function(r){
     if(!r[0]||r[3]==='N')return;
     var cat=r[0].trim();
     if(!wowMap[cat]){wowMap[cat]={cat:cat,icon:r[1].trim(),items:[]};wowOrder.push(cat);}
@@ -837,7 +839,7 @@ function parseSheetData(results){
   // ── SCHEDULE tab ──────────────────────────────────────────────────────────
   // Cols: Day | Time | Item | Type (normal/transition/note) | Host note | Active
   var newSched={};
-  schedRows.slice(1).forEach(function(r){
+  schedRows.slice(CONTENT_START_INDEX).forEach(function(r){
     if(!r[0]||!r[2]||r[5]==='N')return;
     var day=r[0].trim();
     if(!newSched[day])newSched[day]=[];
