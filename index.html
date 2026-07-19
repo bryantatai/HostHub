@@ -225,6 +225,37 @@ html,body{height:100%;background:#E5E5EA;font-family:-apple-system,BlinkMacSyste
 .host-name{font-size:14px;color:var(--dark);flex:1;}
 .host-row.is-me .host-name{font-weight:700;}
 .you-chip{font-size:12px;font-weight:700;background:var(--or-l);color:var(--or-d);padding:4px 10px;border-radius:10px;}
+/* Walkie badge — circular light-blue W shown when host carries a walkie-talkie */
+.walkie-badge{width:22px;height:22px;border-radius:50%;background:#4DA6E0;color:#fff;font-size:11px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 3px rgba(77,166,224,.4);margin-left:2px;}
+.walkie-badge.lg{width:24px;height:24px;font-size:12px;}
+/* Team badges — Host Lead vs Host Crew differentiated */
+.role-badge.team-lead{background:#E8DEF8;color:#5B3FA8;}
+.role-badge.team-crew{background:#DDEEF5;color:#2C6E8F;}
+.role-badge.team-reinf{background:#FCE7D0;color:#9A6212;}
+/* Dynamic location header colours — assigned by position order (loc-0..loc-9) */
+.pos-group.loc-0 .pos-group-icon{background:#FCE3D6;} .pos-group.loc-0 .pos-group-icon i{color:#C4562A;}
+.pos-group.loc-1 .pos-group-icon{background:#FDF0CE;} .pos-group.loc-1 .pos-group-icon i{color:#A9800F;}
+.pos-group.loc-2 .pos-group-icon{background:#DCEEDC;} .pos-group.loc-2 .pos-group-icon i{color:#3B7D3F;}
+.pos-group.loc-3 .pos-group-icon{background:#D6E8F5;} .pos-group.loc-3 .pos-group-icon i{color:#2C6E9F;}
+.pos-group.loc-4 .pos-group-icon{background:#EADDF5;} .pos-group.loc-4 .pos-group-icon i{color:#7A4BB0;}
+.pos-group.loc-5 .pos-group-icon{background:#F8DCE8;} .pos-group.loc-5 .pos-group-icon i{color:#B0417A;}
+.pos-group.loc-6 .pos-group-icon{background:#D6F0EE;} .pos-group.loc-6 .pos-group-icon i{color:#217F76;}
+.pos-group.loc-7 .pos-group-icon{background:#FCE7D0;} .pos-group.loc-7 .pos-group-icon i{color:#9A6212;}
+.pos-group.loc-8 .pos-group-icon{background:#E0E4F5;} .pos-group.loc-8 .pos-group-icon i{color:#4A54A8;}
+.pos-group.loc-9 .pos-group-icon{background:#F0E2D6;} .pos-group.loc-9 .pos-group-icon i{color:#8A6234;}
+.pos-group.loc-0 .pos-group-badge{background:#FCE3D6;color:#C4562A;}
+.pos-group.loc-1 .pos-group-badge{background:#FDF0CE;color:#A9800F;}
+.pos-group.loc-2 .pos-group-badge{background:#DCEEDC;color:#3B7D3F;}
+.pos-group.loc-3 .pos-group-badge{background:#D6E8F5;color:#2C6E9F;}
+.pos-group.loc-4 .pos-group-badge{background:#EADDF5;color:#7A4BB0;}
+.pos-group.loc-5 .pos-group-badge{background:#F8DCE8;color:#B0417A;}
+.pos-group.loc-6 .pos-group-badge{background:#D6F0EE;color:#217F76;}
+.pos-group.loc-7 .pos-group-badge{background:#FCE7D0;color:#9A6212;}
+.pos-group.loc-8 .pos-group-badge{background:#E0E4F5;color:#4A54A8;}
+.pos-group.loc-9 .pos-group-badge{background:#F0E2D6;color:#8A6234;}
+/* is-mine still overrides with the orange theme */
+.pos-group.is-mine .pos-group-icon{background:var(--or)!important;} .pos-group.is-mine .pos-group-icon i{color:var(--card)!important;}
+.pos-group.is-mine .pos-group-badge{background:var(--or)!important;color:var(--card)!important;}
 .roster-search-toggle{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;background:none;border:none;font-size:13px;color:var(--label-2);cursor:pointer;padding:4px 0 10px;}
 .search-wrap{display:block;position:relative;margin-bottom:10px;}
 .search-wrap.open{display:block;}
@@ -305,6 +336,14 @@ html,body{height:100%;background:#E5E5EA;font-family:-apple-system,BlinkMacSyste
 .sos-hdr.open .sos-chev{transform:rotate(180deg);}
 .sos-steps{display:none;padding:6px 12px 12px;border-top:.5px solid var(--sep-2);}
 .sos-steps.open{display:block;}
+.sos-support{display:flex;align-items:center;gap:12px;margin-top:14px;padding:14px 16px;background:#E7F3FB;border:1.5px solid #B9DEF3;border-radius:var(--r);text-decoration:none;cursor:pointer;}
+.sos-support:active{background:#D6EAF7;}
+.sos-support-icon{width:40px;height:40px;border-radius:50%;background:#229ED9;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sos-support-icon i{font-size:22px;color:#fff;}
+.sos-support-text{flex:1;}
+.sos-support-title{font-size:16px;font-weight:800;color:#15668F;}
+.sos-support-sub{font-size:13px;color:#2C7DAA;margin-top:1px;}
+.sos-support-arrow{font-size:16px;color:#229ED9;}
 .step-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;margin-top:12px;}
 .step-row:last-child{margin-bottom:0;}
 .step-num{width:28px;height:28px;background:var(--or);color:var(--card);border-radius:50%;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
@@ -863,9 +902,10 @@ function parseSheetData(results){
   rosterRows.slice(CONTENT_START_INDEX).forEach(function(r){
     if(!r[0]||r[9]==='N')return;
     newRoster.push({
-      name:r[0].trim(), day:r[1].trim(), session:r[2].trim(),
+      name:r[0].trim(), day:normalizeGpcDay(r[1]), session:r[2].trim(),
       position:r[3].trim()||'Unassigned', role:r[4].trim(), time:r[5].trim(),
-      team:r[6].trim(), remarks:r[7].trim(), pairGroup:r[8].trim(), active:(r[9]||'Y').trim()
+      team:r[6].trim(), remarks:r[7].trim(), pairGroup:r[8].trim(), active:(r[9]||'Y').trim(),
+      walkie:((r[10]||'').trim().toUpperCase()==='Y')
     });
   });
   if(newRoster.length) DATA.roster=newRoster;
@@ -1009,6 +1049,55 @@ var GPC_DAYS = [
   {label:'Sun', date:'26 Jul', full:'Sun 26 Jul'},
   {label:'Mon', date:'27 Jul', full:'Mon 27 Jul'},
 ];
+
+// Google Sheets may export the roster Day column in many formats (a real date like
+// "2026-07-23", "7/23/2026", "23/07/2026", "Wed Jul 23 2026", or already "Thu 23 Jul").
+// This maps any of them to the canonical GPC_DAYS "full" string the app matches on,
+// by resolving to the day-of-month (23–27 July 2026). Falls back to the trimmed input.
+function normalizeGpcDay(raw){
+  if(raw==null) return '';
+  var s=String(raw).trim();
+  if(!s) return '';
+  // Already canonical?
+  for(var i=0;i<GPC_DAYS.length;i++){ if(s===GPC_DAYS[i].full) return s; }
+  // Try to find the day-of-month for a July 2026 date.
+  var dom=null;
+  // ISO or dash: 2026-07-23 or 2026/07/23
+  var m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if(m){ if(+m[2]===7) dom=+m[3]; }
+  if(dom===null){
+    // US or intl slash: 7/23/2026, 23/07/2026, 07-23-2026
+    var m2=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+    if(m2){
+      var a=+m2[1], bb=+m2[2];
+      if(a===7 && bb>=23 && bb<=27) dom=bb;          // M/D
+      else if(bb===7 && a>=23 && a<=27) dom=a;        // D/M
+    }
+  }
+  if(dom===null){
+    // A weekday/month name string like "Wed Jul 23 2026" — pull the day number
+    // directly (timezone-safe, avoids Date() UTC shifting the day).
+    if(/jul/i.test(s)){
+      var mj=s.match(/\b(2[3-7])\b/);
+      if(mj) dom=+mj[1];
+    }
+  }
+  if(dom===null){
+    // Anything JS Date can parse, as a fallback
+    var d=new Date(s);
+    if(!isNaN(d.getTime()) && d.getMonth()===6) dom=d.getDate(); // month 6 = July
+  }
+  if(dom===null){
+    // Last resort: a bare "23 Jul" or "23" hiding in the string
+    var m3=s.match(/\b(2[3-7])\b/);
+    if(m3) dom=+m3[1];
+  }
+  if(dom!==null){
+    var map={23:'Thu 23 Jul',24:'Fri 24 Jul',25:'Sat 25 Jul',26:'Sun 26 Jul',27:'Mon 27 Jul'};
+    if(map[dom]) return map[dom];
+  }
+  return s; // give back the original if we couldn't resolve it
+}
 
 var DATA = {
   today:{
@@ -1183,11 +1272,20 @@ var DATA = {
   ],
   groupedLists:{
     'wow-box':[
-    {cat:'Weather',       icon:'ti-cloud-rain', items:['Umbrellas','Towels','Socks','Tissue paper','Plastic bags','Toyogo storage boxes','Heat packs','Cashmere shawls','Hand warmers','Disposable ponchos']},
-    {cat:'Wow Experience',icon:'ti-sparkles',   items:['Kopiko candies','Notebooks & pens','Highlighters','Mints','Fidget toys','Foam art stickers','Crayons & drawing pads']},
-    {cat:'Practical',     icon:'ti-shirt',      items:['Stain remover pens','Body wipes','Mouthwash','Dental floss picks','Hair ties & bobby pins','Safety pins','Sanitary pads & tampons','Disposable toothbrushes & toothpaste','Lip balm','Hand cream','Hand sanitiser','Plasters / bandages','Cotton buds','Oil blotting sheets','Mini combs']},
-    {cat:'Health',        icon:'ti-pill',       items:['Vitamin C candies','Cough drops','Eye drops','Face masks','Electrolyte sachets','Thermometer']},
-    {cat:'Snacks',        icon:'ti-cookie',     items:['Granola bars','Nuts','Crackers','Cup noodles']},
+    {cat:'Kids',         icon:'ti-mood-kid',   items:['Air Dry Clay Kit','3D Puzzle','Color Sheet and Crayons','Children Puzzles','3D Stickers Art Craft DIY Kit','E-Drawing Board','Magic Water Coloring Book']},
+    {cat:'Wet Weather',  icon:'ti-cloud-rain', items:['Umbrellas','Towels','Shirts','Socks','Raincoats','Tissue Paper','Plastic Bag','Bathroom Slippers']},
+    {cat:'Cold Weather', icon:'ti-snowflake',  items:['Blanket','Shawl']},
+    {cat:'Hot Weather',  icon:'ti-sun',        items:['Wet Wipes','Disposable Cooling Towel','Fan']},
+    {cat:'Energy Boost', icon:'ti-bolt',       items:['Chocolate Packet','Stress Relief Cube','Eye Mask','Key Cap']},
+    ],
+    'faq':[
+    {cat:'Facilities & Toilets',icon:'ti-building',items:['Q: Where is the toilet? — A: Level 4, extreme left and right sides of the atrium.','Q: Can I take the stairs instead of the lifts? — A: The staircase is currently not accessible. If crowded, we\'ll direct you to alternative lifts.']},
+    {cat:'Seating & Auditorium',icon:'ti-armchair',items:['Q: Where do I sit? — A: Our ushers will direct you to your seats.','Q: Can I bring food into the Auditorium? — A: Yes! Just dispose of your trash after.']},
+    {cat:'Parking',icon:'ti-parking',items:['Q: Is there parking? — A: Yes, at Level 1. Alternatives: HDB blocks 414–417, or StoreFriendly Centre beside the church.']},
+    {cat:'Water & Refreshments',icon:'ti-glass-full',items:['Q: Where can I get water? — A: Fridges at the sides of the atrium, or refill at the water point beside the Coffee/Barista pop-up.','Q: Warm water? — A: Ask the Coffee/Barista pop-up for hot water if the cooler option isn\'t available.']},
+    {cat:'Offering',icon:'ti-gift',items:['Q: How do I give my offering without an SG banking app? — A: Cash via the offering envelopes behind the chairs.']},
+    {cat:'WiFi & Charging',icon:'ti-wifi',items:['Q: Is there WiFi? — A: [Set the WiFi answer in the Grouped Lists tab]','Q: Portable charger? — A: Yes, chargers for rental opposite the Baby Space.','Q: Power socket? — A: A few around Level 4. Don\'t leave devices unattended.']},
+    {cat:'Guests & Pastors',icon:'ti-user-heart',items:['Q: Can I meet a pastor? — A: Get details, take their contact but don\'t promise anything. Radio your lead and close the loop later.']},
     ],
   },
   info:[
@@ -1195,7 +1293,7 @@ var DATA = {
     {title:"Wow box",position:"All",icon:"ti-gift",body:"__grouped__",contentType:"grouped-list",linkedList:"wow-box"},
     {title:"Wet weather plan",position:"All",icon:"ti-cloud-rain",body:"If it rains:\n1. Alert your lead via Telegram immediately\n2. Direct guests to Entrance A (covered walkway)\n3. Retrieve umbrellas from Ground store room, left shelf\n4. Ensure Ground team covers Entrance A\n5. Check with lead before repositioning"},
     {title:"First aid",position:"All",icon:"ti-first-aid-kit",body:"First aid kits: [Location 1] and [Location 2].\n\nIf a guest is unwell:\n1. Stay \u2014 do not leave alone\n2. Guide to a quiet space\n3. Source water\n4. Radio lead: name, location, condition\n5. Do not leave until handover confirmed"},
-    {title:"FAQ",position:"All",icon:"ti-help-square",body:"Q: Where is the toilet?\nA: Level 4, to the extreme left and right sides of the atrium.\n\nQ: Where do I sit?\nA: Our ushers will direct you to your seats.\n\nQ: Can I meet a pastor?\nA: Obtain more information about the request. How does he/she know the pastor, where and when. Get the requestor's name and number/email but do not promise anything. Inform the requester that we will note their request and will inform them if we have updates. Radio your lead immediately. Ensure the loop is closed later.\n\nQ: Is there parking?\nA: There is parking available at level 1. Alternatively, the nearest carparks can be found at the residental HDB blocks 414-417 or the StoreFriendly Centre building beside our church. \n\nQ: Can I bring food into the Auditorium?\nA: Yes! However, be sure to dispose your trash after.\n\nQ: Where can I get water?\nA: You may purchase mineral water from the fridges at the sides of the atrium or refill your water bottle at the water point located beside the Coffee/Barista pop up area.\n\nQ: Can I refill my waterbottle? Do you have warm water?\nA: Yes you can refill your water bottle at the water points. We should have a warm water option at the water cooler. Otherwise, please approach the Coffee/Barista pop up for some hot water if needed.\n\nQ: How can I give my offering, I don't have any SG Banking App.\nA: You may provide your offering in cash via the offering envelopes located behnd the chairs.\n\nQ: Can I take the stairs up instead of the lifts?\nA: The staircase is currently not accessible. If it gets too crowded, we will direct you to alterative lifts (i.e. cargo lifts).\n\nQ: Is there WiFi/ Can I connect to a WiFi network?\nA: Yes, we have XXXXXX(help me input the correct answer, is it QR code?)\n\nQ: Do you have a portable charger?\nA: Yes, we do have available chargers for rental that is located right opposite the baby space. \n\nQ:Is there any area with a power socket where I can charge my device?\nA: Yes, there are a few located around level 4. However, for safety we recommend that you do not leave your device unattended."},
+    {title:"FAQ",position:"All",icon:"ti-help-square",body:"__grouped__",contentType:"grouped-list",linkedList:"faq"},
     {title:"Ground position guide",position:"Ground",icon:"ti-map-pin",body:"PURPOSE:Create a safe, welcoming, and seamless first impression for every guest.||Warm Welcome~💜~Smile and greet warmly^Be alert to first-time visitors, walk-ins and registered guests^Assist guests who need help||Keep It Safe~🚪~Keep all doors closed when required^Watch for wet or slippery floors^Open doors for guests when needed||Manage the Lift~🛗~Send lifts up/down promptly during transition between services^Crowd control^Remind guests about uneven lift landings when necessary^For safety — do NOT use your hands to hold the lift!^If Cargo Lift is used — no parents with babies (hygiene reasons)||Communicate Early~📢~Update when the crowd reaches ⅔ capacity (include photo)^Inform Lobby of spotted guests and ensure messages are acknowledged||Coordinate Guest Care~🤝~Alert Lobby for guests with prams, wheelchairs, or mobility needs^Call for reinforcement when escorting guests upstairs||Create Atmosphere~🎵~Maintain a pleasant environment with light background music^Work with BM to set up the big fan during hot weather^Work with BM to deploy the blower during wet weather",photo:""},
     {title:"Lobby position guide",position:"Lobby",icon:"ti-door-enter",body:"PURPOSE:Ensure a safe, welcoming, and faith-filled atmosphere for everyone.||Set the Atmosphere~💙~Warmly greet everyone^Bring FAITH and ENERGY||Watch for Guests~👀~Spot communicated guests/visitors^Escort walk-ins & guests to the Atrium^Relay Comms from Ground to crew^Inform Atrium of guest arrivals^Connect guests with the Atrium Host||Keep the Lobby Flowing~🚶~Manage traffic between services^Ensure smooth service transitions^Prevent lobby congestion^Send the lift back to Level 1^Be safe! Don't hold the lift with your hand!||Maintain Space~✨~Ensure food deliveries aren't left in the lobby||Wet Weather~🌧~Set up towels, spare shirts & socks^Offer umbrella sleeves^Spot drenched members & visitors and offer a change of clothing||Hot Weather~☀️~Set up tissues & refreshers^Ensure a comfortable temperature",photo:""},
     {title:"Atrium position guide",position:"Atrium",icon:"ti-layout",body:"PURPOSE:Engage and create experience.||Engagement~🚶~Closed loop for guests' comms from lobby^Updated guest tracker^Communicate with Usher not to shift walk-in guests^Handover to Connect/Global PIC^Share guest final updates with HM/HS||Experience~💙~Create experience, bring delight^Look out for invisible signs||Work with Other Ministries~🤝~Ensure Baby Space is checked before and during service^Be aware of Connect and Fly-in list^Ensure 2 hosts support Audi doors after P&W begins||Update Guest Info Timely~📱~Know where Atrium hosts are, deploy to engage when needed^Close the loop with Lobby on potential walk-ins^Inform HM/HS when guests arrive",photo:""},
@@ -1563,10 +1661,11 @@ function renderRosterGroups(){
     return (ai===-1?99:ai)-(bi===-1?99:bi);
   });
 
-  sortedPos.forEach(function(pos){
+  sortedPos.forEach(function(pos,posIdx){
     var hosts=groups[pos];
     var isMine=pos===myPos;
     var pd=DATA.positions.find(function(p){return p.name===pos;});
+    var locColor='loc-'+(posIdx%10);  // dynamic colour by order, cycles after 10
 
     // Sort by role within position
     hosts.sort(function(a,b){return roleRank(a.role)-roleRank(b.role);});
@@ -1584,7 +1683,7 @@ function renderRosterGroups(){
     });
     var unpaired=engage_rows.filter(function(r){return !r.pairGroup;});
 
-    html+='<div class="pos-group'+(isMine?' is-mine':'')+'"><div class="pos-group-hdr"><div class="pos-group-icon"><i class="ti '+(pd?pd.icon:'ti-map-pin')+'"></i></div><div><div class="pos-group-name">'+esc(pos)+'</div><div class="pos-group-sub">'+esc(hosts[0].time)+' · '+hosts.length+' host'+(hosts.length!==1?'s':'')+'</div></div><span class="pos-group-badge">'+hosts.length+'</span></div>';
+    html+='<div class="pos-group '+locColor+(isMine?' is-mine':'')+'"><div class="pos-group-hdr"><div class="pos-group-icon"><i class="ti '+(pd?pd.icon:'ti-map-pin')+'"></i></div><div><div class="pos-group-name">'+esc(pos)+'</div><div class="pos-group-sub">'+esc(hosts[0].time)+' · '+hosts.length+' host'+(hosts.length!==1?'s':'')+'</div></div><span class="pos-group-badge">'+hosts.length+'</span></div>';
 
     // 1. Area IC then Comms IC — always first, never in a pair
     lead_rows.forEach(function(r){html+=renderHostRow(r,S.name);});
@@ -1614,22 +1713,32 @@ function renderHostRow(r,myName){
   if(r.role==='Area IC') roleBadgeClass='role-area-ic';
   else if(r.role==='Comms IC') roleBadgeClass='role-comms-ic';
   var isDebriefIC=r.remarks&&r.remarks.toLowerCase().indexOf('debrief ic')>-1;
-  // Role badge: show role if assigned, else fall back to Team category (Host Lead/Crew/Reinforcement)
+  // Role badge: show role if assigned, else fall back to Team category with its own colour
   var badgeHtml='';
   if(r.role){
     badgeHtml='<span class="role-badge '+roleBadgeClass+'">'+esc(r.role)+'</span>';
   } else if(r.team){
-    badgeHtml='<span class="role-badge role-team">'+esc(r.team)+'</span>';
+    badgeHtml='<span class="role-badge '+teamBadgeClass(r.team)+'">'+esc(r.team)+'</span>';
   }
   var metaHtml=badgeHtml+(r.remarks?'<span class="remarks-badge'+(isDebriefIC?' debrief-ic':'')+'">'+(isDebriefIC?'🔑 ':'')+esc(r.remarks)+'</span>':'');
+  var walkieHtml=r.walkie?'<span class="walkie-badge" title="Carries a walkie-talkie">W</span>':'';
   return '<div class="host-row'+(isMe?' is-me':'')+'">'+
     '<div class="host-av">'+abbr+'</div>'+
     '<div class="host-info">'+
       '<div class="host-name">'+esc(r.name)+'</div>'+
       (metaHtml?'<div class="host-meta">'+metaHtml+'</div>':'')+
     '</div>'+
+    walkieHtml+
     (isMe?'<span class="you-chip">YOU</span>':'')+
   '</div>';
+}
+// Map a team name to its badge colour class.
+function teamBadgeClass(team){
+  var t=(team||'').toLowerCase();
+  if(t.indexOf('lead')>-1) return 'team-lead';
+  if(t.indexOf('crew')>-1) return 'team-crew';
+  if(t.indexOf('reinforce')>-1) return 'team-reinf';
+  return 'role-team';
 }
 function toggleSearch(){ /* search always visible in v4 */ }
 function renderSearch(q){
@@ -1754,6 +1863,13 @@ function renderSOS(){
         '</div>'+
       '</div>';
   });
+  // App-issue support link → opens Telegram DM to @hellohostsupport
+  html+='<a class="sos-support" href="https://t.me/hellohostsupport" target="_blank" rel="noopener">'+
+    '<div class="sos-support-icon"><i class="ti ti-brand-telegram"></i></div>'+
+    '<div class="sos-support-text"><div class="sos-support-title">App not working?</div>'+
+    '<div class="sos-support-sub">Message @hellohostsupport on Telegram for help</div></div>'+
+    '<i class="ti ti-external-link sos-support-arrow"></i>'+
+  '</a>';
   el.innerHTML=html;
 }
 function toggleSOS(i){
@@ -2143,7 +2259,7 @@ function saveLSched(){
 
 // ── ROSTER TAB ────────────────────────────────────────────────────────────────
 function renderLRoster(){
-  var days=['Thu 17 Jul','Fri 18 Jul','Sat 19 Jul','Sun 20 Jul'];
+  var days=GPC_DAYS.map(function(d){return d.full;});
   var sess=['S1','S2'];
   var html='<div class="le-section"><div class="le-section-hdr"><div class="le-section-title">Roster entries</div></div>';
   // Group by day + session
@@ -2157,7 +2273,7 @@ function renderLRoster(){
         var isHidden=r.active==='N';
         html+='<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:.5px solid var(--sep-2);opacity:'+(isHidden?.4:1)+';">'+
           '<div style="flex:1;">'+
-            '<div style="font-size:14px;font-weight:600;color:var(--dark);">'+esc(r.name)+'</div>'+
+            '<div style="font-size:14px;font-weight:600;color:var(--dark);">'+esc(r.name)+(r.walkie?' <span style="display:inline-flex;width:16px;height:16px;border-radius:50%;background:#4DA6E0;color:#fff;font-size:9px;font-weight:900;align-items:center;justify-content:center;vertical-align:middle;">W</span>':'')+'</div>'+
             '<div style="font-size:12px;color:var(--label-2);">'+esc(r.position)+' · '+esc(r.role)+(r.remarks?' · '+esc(r.remarks):'')+'</div>'+
           '</div>'+
           '<button onclick="editRosterRow('+idx+')" style="background:var(--or-l);border:none;border-radius:var(--r-xs);padding:7px 12px;font-size:13px;font-weight:600;color:var(--or-d);cursor:pointer;">Edit</button>'+
@@ -2189,6 +2305,7 @@ function editRosterRow(idx){
     '<div class="le-row"><div class="le-row-label">Time</div><div class="le-row-value"><input class="le-field" id="er_time" value="'+esc(r.time)+'"/></div></div>'+
     '<div class="le-row"><div class="le-row-label">Remarks</div><div class="le-row-value"><input class="le-field" id="er_remarks" value="'+esc(r.remarks||'')+'" placeholder="e.g. Debrief IC"/></div></div>'+
     '<div class="le-row"><div class="le-row-label">Pair group</div><div class="le-row-value"><input class="le-field" id="er_pair" value="'+esc(r.pairGroup||'')+'" placeholder="e.g. A or B"/></div></div>'+
+    '<div class="le-row"><div class="le-row-label">Walkie</div><div class="le-row-value" style="display:flex;align-items:center;gap:10px;"><label class="toggle-sw"><input type="checkbox" id="er_walkie" '+(r.walkie?'checked':'')+'/><span class="slider"></span></label><span style="font-size:13px;color:var(--label-2);">Y = carries a walkie (blue W badge)</span></div></div>'+
   '</div>'+
   '<div style="display:flex;gap:8px;">'+
     '<button onclick="S.leadEditIdx=null;renderLBody();" style="flex:1;padding:14px;background:var(--bg);border:1.5px solid var(--sep);border-radius:var(--r-sm);font-size:15px;font-weight:700;color:var(--label-2);cursor:pointer;">Cancel</button>'+
@@ -2205,12 +2322,13 @@ function saveRosterRow(idx){
   DATA.roster[idx].time    =document.getElementById('er_time').value.trim();
   DATA.roster[idx].remarks =document.getElementById('er_remarks').value.trim();
   DATA.roster[idx].pairGroup=document.getElementById('er_pair').value.trim();
+  DATA.roster[idx].walkie  =document.getElementById('er_walkie').checked;
   postToSheet({action:'updateRoster',roster:DATA.roster});
   leShowSaved('Roster updated');
   renderLBody();
 }
 function addRosterRow(){
-  DATA.roster.push({name:'',day:GPC_DAYS[S.pickerDay||0].full,session:'S1',position:'Ground',role:'Engage',time:'10:30am–4:00pm',remarks:'',pairGroup:'',active:'Y'});
+  DATA.roster.push({name:'',day:GPC_DAYS[S.pickerDay||0].full,session:'S1',position:'Ground',role:'Engage',time:'10:30am–4:00pm',remarks:'',pairGroup:'',active:'Y',walkie:false});
   editRosterRow(DATA.roster.length-1);
 }
 function saveLRoster(){
