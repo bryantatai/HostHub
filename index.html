@@ -651,17 +651,17 @@ i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1
   <div class="overlay" id="nameOverlay" onclick="handleOvClick(event)">
     <div class="sheet">
       <div class="sheet-handle"></div>
-      <div class="sheet-head"><div class="sheet-title">Who are you today?</div><div class="sheet-sub">Pick your session and name.</div></div>
+      <div class="sheet-head"><div class="sheet-title">Tell us more about yourself</div><div class="sheet-sub">Key in your name and pick your session</div></div>
       <div class="sheet-body">
-        <div class="sheet-lbl">Conference day</div>
+        <div class="sheet-lbl">Your name</div>
+        <select class="name-sel" id="nameSel" onchange="onNameChange()"><option value="">Select your name…</option></select>
+        <div class="sheet-lbl" style="margin-top:16px;">Conference Day</div>
         <div class="sess-btns" style="flex-wrap:wrap;gap:6px;margin-bottom:16px;" id="dayBtns"></div>
         <div class="sheet-lbl">Your session</div>
         <div class="sess-btns">
           <button class="sb" id="s1b" onclick="pickSess('S1')"><div class="sb-time">10:30am – 4:00pm</div><div class="sb-lbl">Session 1 (AM)</div></button>
           <button class="sb" id="s2b" onclick="pickSess('S2')"><div class="sb-time">2:00pm – 7:00pm</div><div class="sb-lbl">Session 2 (PM)</div></button>
         </div>
-        <div class="sheet-lbl">Your name</div>
-        <select class="name-sel" id="nameSel" onchange="onNameChange()"><option value="">Select your name…</option></select>
         <button class="sheet-cta" id="sheetCta" onclick="confirmName()" disabled>Confirm — show my assignment</button>
         <button class="sheet-skip" onclick="skipPicker()">Skip for now</button>
       </div>
@@ -793,6 +793,25 @@ async function fetchSheetTab(tabName, fallbackName, fingerprint){
   return [];
 }
 
+// Robustly locate a tab's data rows. gviz can return a *variable* number of
+// leading rows (it sometimes treats the merged banner/note as header rows), so a
+// fixed 3-row skip can silently eat real data (this dropped the first two roster
+// hosts). Instead, find the header row by a known column label and take everything
+// after it. Falls back to the fixed offset if the label isn't found — so behaviour
+// is identical when gviz returns all rows.
+function dataRows(rows, headerToken){
+  if(!rows || !rows.length) return [];
+  var tok=String(headerToken).trim().toLowerCase();
+  var scan=Math.min(rows.length,6);
+  for(var i=0;i<scan;i++){
+    var r=rows[i]||[];
+    for(var j=0;j<r.length;j++){
+      if(String(r[j]).trim().toLowerCase()===tok) return rows.slice(i+1);
+    }
+  }
+  return rows.slice(3); // fallback: banner, note, header, then data
+}
+
 async function fetchAllFromSheet(){
   if(SHEET_ID==='YOUR_SHEET_ID_HERE'){
     console.log('Using mock data — no Sheet ID configured');
@@ -890,7 +909,7 @@ function parseSheetData(results){
   // ── TODAY tab ─────────────────────────────────────────────────────────────
   if(todayRows && todayRows.length){
     var todayMap={};
-    todayRows.slice(CONTENT_START_INDEX).forEach(function(r){if(r[0])todayMap[r[0].trim()]=r[1]||'';});
+    dataRows(todayRows,'KEY').forEach(function(r){if(r[0])todayMap[r[0].trim()]=r[1]||'';});
     if(todayMap.day_label) DATA.today.dayLabel=todayMap.day_label;
     if(todayMap.motd)      DATA.today.motd=todayMap.motd;
     DATA.today.alerts=[todayMap.alert_1,todayMap.alert_2,todayMap.alert_3].filter(Boolean);
@@ -899,7 +918,7 @@ function parseSheetData(results){
   // ── ROSTER tab ────────────────────────────────────────────────────────────
   // Cols: Name | Day | Session | Position | Role | Time slot | Team | Remarks | Pair group | Active
   var newRoster=[];
-  rosterRows.slice(CONTENT_START_INDEX).forEach(function(r){
+  dataRows(rosterRows,'Name').forEach(function(r){
     if(!r[0]||r[9]==='N')return;
     newRoster.push({
       name:r[0].trim(), day:normalizeGpcDay(r[1]), session:r[2].trim(),
@@ -915,7 +934,7 @@ function parseSheetData(results){
   // Builds DATA.groupedLists = { 'wow-box': [ {cat, icon, items:[...]}, ... ], ... }
   var groupedRaw={};   // listId -> { catName -> {cat, icon, items:[{name,sort}]} }
   var groupedCatOrder={}; // listId -> [catName in first-seen order]
-  groupedRows.slice(CONTENT_START_INDEX).forEach(function(r){
+  dataRows(groupedRows,'List ID').forEach(function(r){
     if(!r[0]||!r[3]||r[4]==='N')return;  // need List ID + Item, and Active≠N
     var listId=r[0].trim(), cat=(r[1]||'').trim(), icon=(r[2]||'').trim(),
         item=r[3].trim(), sort=parseFloat(r[5])||0;
@@ -941,7 +960,7 @@ function parseSheetData(results){
   // ── INFO HUB tab ─────────────────────────────────────────────────────────
   // Cols: Section title | Position | Icon | Body | Active | Photo URL | Photo caption | Content type | Linked list ID
   var newInfo=[];
-  infoRows.slice(CONTENT_START_INDEX).forEach(function(r){
+  dataRows(infoRows,'Section title').forEach(function(r){
     if(!r[0]||r[4]==='N')return;
     if(r[0].trim().toLowerCase().indexOf('position guide')>-1)return; // image-only guides now live in Position Guides
     var contentType=(r[7]||'text').trim();
@@ -968,7 +987,7 @@ function parseSheetData(results){
   // so existing sheets keep working.
   if(!DATA.groupedLists || !DATA.groupedLists['wow-box']){
     var wowMap={}, wowOrder=[];
-    wowRows.slice(CONTENT_START_INDEX).forEach(function(r){
+    dataRows(wowRows,'Category').forEach(function(r){
       if(!r[0]||r[3]==='N')return;
       var cat=r[0].trim();
       if(!wowMap[cat]){wowMap[cat]={cat:cat,icon:r[1].trim(),items:[]};wowOrder.push(cat);}
@@ -983,7 +1002,7 @@ function parseSheetData(results){
   // ── SCHEDULE tab ──────────────────────────────────────────────────────────
   // Cols: Day | Time | Item | Type (normal/transition/note) | Host note | Active
   var newSched={};
-  schedRows.slice(CONTENT_START_INDEX).forEach(function(r){
+  dataRows(schedRows,'Day').forEach(function(r){
     if(!r[0]||!r[2]||r[5]==='N')return;
     var day=r[0].trim();
     if(!newSched[day])newSched[day]=[];
@@ -995,7 +1014,7 @@ function parseSheetData(results){
   // Cols: Position | Image URL | Alt text | Sort order | Active
   // One row is one swipe page. Google Drive sharing links are converted when rendered.
   var newPositionGuides={};
-  positionGuideRows.slice(CONTENT_START_INDEX).forEach(function(r){
+  dataRows(positionGuideRows,'Position').forEach(function(r){
     if(!r[0]||!r[1]||String(r[4]||'Y').toUpperCase()==='N')return;
     var position=r[0].trim();
     if(!newPositionGuides[position])newPositionGuides[position]=[];
@@ -2062,6 +2081,8 @@ function showDebriefToast(message,isError){
 
 async function saveDebriefDraft(){
   if(!S.debriefPasscode){openPasscode('debrief_ic');return;}
+  if(S._savingDebrief) return;            // ignore rapid repeat taps while a save is in flight
+  S._savingDebrief=true;
   var entry=ensureDebriefEntry(S.debriefDay,S.debriefSess);
   entry.status='draft';
   try{
@@ -2071,6 +2092,8 @@ async function saveDebriefDraft(){
     setTimeout(function(){fetchDebriefs(S.debriefPasscode);},900);
   }catch(e){
     console.warn(e);showDebriefToast('Draft could not be saved',true);
+  }finally{
+    S._savingDebrief=false;
   }
 }
 async function publishDebrief(){
