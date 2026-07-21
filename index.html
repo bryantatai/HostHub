@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <title>Host HQ v4</title>
@@ -27,7 +27,7 @@
 html,body{height:100%;background:#E5E5EA;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;color:var(--dark);}
 
 /* ── SHELL ── */
-.shell{width:100%;max-width:390px;height:100vh;max-height:844px;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;position:relative;}
+.shell{width:100%;max-width:390px;height:100vh;height:100dvh;max-height:844px;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;position:relative;}
 
 /* ── STATUS BAR ── */
 .status-bar{background:var(--or);padding:14px 20px 6px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
@@ -58,15 +58,15 @@ html,body{height:100%;background:#E5E5EA;font-family:-apple-system,BlinkMacSyste
 .page.active{display:block;}
 
 /* ── NAV ── */
-.nav{background:var(--or);display:flex;align-items:flex-end;padding:4px 4px 10px;border-top:none;flex-shrink:0;}
-.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:5px 4px;color:rgba(255,255,255,.6);border-radius:var(--r-xs);}
-.nb i{font-size:20px;}
-.nb span{font-size:12px;font-weight:700;letter-spacing:-.1px;}
+.nav{background:var(--or);display:flex;align-items:flex-end;padding:6px 4px calc(12px + env(safe-area-inset-bottom,0px));border-top:none;flex-shrink:0;}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:9px 4px;color:rgba(255,255,255,.6);border-radius:var(--r-xs);}
+.nb i{font-size:24px;}
+.nb span{font-size:13px;font-weight:700;letter-spacing:-.1px;}
 .nb.active{background:rgba(255,255,255,.25);color:var(--card);border-radius:var(--r-xs);}
 .nb-today-wrap{flex:1.4;display:flex;flex-direction:column;align-items:center;background:none;border:none;cursor:pointer;padding:0 2px 2px;}
-.nb-pill{background:var(--card);border-radius:28px;padding:9px 18px;display:flex;flex-direction:column;align-items:center;gap:2px;transform:translateY(-13px);box-shadow:0 0 0 6px var(--or),0 4px 20px rgba(196,127,10,.2);}
-.nb-pill i{font-size:21px;color:var(--or);}
-.nb-pill span{font-size:12px;font-weight:800;color:var(--or);letter-spacing:.2px;}
+.nb-pill{background:var(--card);border-radius:30px;padding:12px 22px;display:flex;flex-direction:column;align-items:center;gap:2px;transform:translateY(-13px);box-shadow:0 0 0 6px var(--or),0 4px 20px rgba(196,127,10,.2);}
+.nb-pill i{font-size:25px;color:var(--or);}
+.nb-pill span{font-size:13px;font-weight:800;color:var(--or);letter-spacing:.2px;}
 
 /* ── SHARED COMPONENTS ── */
 .sec-label{font-size:14px;font-weight:700;color:var(--label-2);margin:20px 0 10px;letter-spacing:-.1px;}
@@ -638,6 +638,9 @@ i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1
       <button class="pos-guide-btn" id="posGuideBtn" style="display:none;" onclick="goToMyPos()">
         <i class="ti ti-map-pin lead"></i><span id="posGuideLbl">View your position guide</span><i class="ti ti-chevron-right chev"></i>
       </button>
+      <button class="pos-guide-btn" id="posBriefBtn" style="display:none;" onclick="openBrief()">
+        <i class="ti ti-clipboard-list lead"></i><span id="posBriefLbl">View your position brief</span><i class="ti ti-chevron-right chev"></i>
+      </button>
       <div class="pill-row" id="infoPills"></div>
       <div id="infoSections"></div>
     </div>
@@ -863,6 +866,7 @@ async function fetchAllFromSheet(){
     ['🗓 Schedule','Schedule','SCHEDULE'],
     ['🗂 Grouped Lists','Grouped Lists','GROUPED LISTS'],
     ['🖼 Position Guides','Position Guides','POSITION GUIDES'],
+    ['📍 Position Briefs','Position Briefs','POSITION BRIEFS'],
   ];
   var fetches=[
     Promise.all(specs.map(function(s){return fetchSheetTab(s[0],s[1],s[2]);})),
@@ -936,7 +940,7 @@ function parseSheetData(results){
   var CONTENT_START_INDEX=3;
   var todayRows=results[0], rosterRows=results[1], infoRows=results[2],
       sosRows=results[3], qrRows=results[4], connectRows=results[5], wowRows=results[6],
-      schedRows=results[7]||[], groupedRows=results[8]||[], positionGuideRows=results[9]||[];
+      schedRows=results[7]||[], groupedRows=results[8]||[], positionGuideRows=results[9]||[], positionBriefRows=results[10]||[];
 
   // ── TODAY tab ─────────────────────────────────────────────────────────────
   if(todayRows && todayRows.length){
@@ -1054,6 +1058,15 @@ function parseSheetData(results){
   });
   Object.keys(newPositionGuides).forEach(function(position){newPositionGuides[position].sort(function(a,b){return a.sort-b.sort;});});
   DATA.positionGuides=newPositionGuides;
+
+  // ── POSITION BRIEFS tab ───────────────────────────────────────────────────
+  // Cols: Position | Icon keyword | Body text | Active (Y/N)
+  var newBriefs=[];
+  dataRows(positionBriefRows,'Position').forEach(function(r){
+    if(!r[0]||String(r[3]||'Y').toUpperCase()==='N')return;
+    newBriefs.push({position:String(r[0]).trim(), icon:String(r[1]||'ti-clipboard-list').trim(), body:String(r[2]||'').trim()});
+  });
+  if(newBriefs.length) DATA.positionBriefs=newBriefs;
 
   // Re-render current view
   renderAll();
@@ -1309,6 +1322,7 @@ var DATA = {
     {name:"Alexander Tai",day:"Mon 27 Jul",session:"S2",position:"Unassigned",role:"",time:"12:00 PM \u2013 7:00PM",team:"Reinforcement",remarks:"",pairGroup:"",active:"Y"},
   ],
   positionGuides:{},
+  positionBriefs:[],
   positions:[
     {id:'ground',       name:'Ground',        icon:'ti-map-pin',       sub:'First contact · Outside',     desc:'You are the first face delegates see. Stand at the main entrance and step in before they have to figure out what to do.',tip:'Darting eyes = new guest. Beeline to toilet = returning. A warm hello is all it takes.'},
     {id:'lobby',        name:'Lobby',         icon:'ti-door-enter',    sub:'Entry layer · Inside',        desc:'Watch the lobby reaction. Amazement = first timer. Straight walk = returning delegate.',tip:'Step in before they have to figure out what to do.'},
@@ -1513,6 +1527,10 @@ function renderToday(){
   var myLead=getMyLeadershipRow();
   if(myRow){
     var pos=DATA.positions.find(function(p){return p.name===myRow.position;});
+    if(!pos){  // tolerant match so e.g. "Atrium: Registration Kiosk" opens the "Atrium" guide
+      var _mp=String(myRow.position||'').trim().toLowerCase();
+      pos=DATA.positions.find(function(p){var n=String(p.name||'').trim().toLowerCase();return n && (_mp===n || _mp.indexOf(n+':')===0 || _mp.indexOf(n+' ')===0);});
+    }
     tp.innerHTML='<div class="hero" id="heroCard"><div class="hero-day">'+esc(autoDayLabel())+'</div><div class="hero-pos-row"><div class="hero-pos-icon"><i class="ti '+(pos?pos.icon:'ti-map-pin')+'"></i></div><div><div class="hero-pos-label">My position today</div><div class="hero-pos-name">'+esc(myRow.position)+'</div><div class="hero-pos-time">'+esc(myRow.time)+'</div></div></div><div class="hero-motd-label">Host message</div><div class="hero-motd">'+esc(DATA.today.motd)+'</div></div>';
     if(pos) document.getElementById('heroCard').onclick=function(){openPD(pos.id);};
   } else if(myLead){
@@ -1814,6 +1832,7 @@ function renderInfoPills(){
 }
 function setInfoFilter(p){S.infoFilter=p;renderInfoPills();renderInfoSections();}
 function renderInfoSections(){
+  updatePositionButtons();
   var el=document.getElementById('infoSections');el.innerHTML='';
   var filtered=DATA.info.filter(function(s){
     if(s.title&&s.title.toLowerCase().indexOf('position guide')>-1)return false;
@@ -1854,9 +1873,47 @@ function renderQuickRef(){
     return row;
   }).join('');
 }
+// Match a host's roster position to a built-in position, tolerating suffixes
+// e.g. "Atrium: Collection Kiosk" -> "Atrium".
+function matchPosition(posName){
+  if(!posName) return null;
+  var mp=String(posName).trim().toLowerCase();
+  var p=DATA.positions.find(function(x){return String(x.name).trim().toLowerCase()===mp;});
+  if(p) return p;
+  return DATA.positions.find(function(x){var n=String(x.name).trim().toLowerCase();return n && (mp.indexOf(n+':')===0||mp.indexOf(n+' ')===0);})||null;
+}
+// Find a host's brief: exact position, else fall back to a broader match.
+function findPositionBrief(posName){
+  var briefs=DATA.positionBriefs||[]; if(!posName) return null;
+  var mp=String(posName).trim().toLowerCase();
+  var b=briefs.find(function(x){return String(x.position).trim().toLowerCase()===mp;});
+  if(b) return b;
+  return briefs.find(function(x){var n=String(x.position).trim().toLowerCase();return n && (mp.indexOf(n+':')===0||mp.indexOf(n+' ')===0);})||null;
+}
+function openBrief(){
+  var myRow=getMyRow(); if(!myRow) return;
+  var b=findPositionBrief(myRow.position); if(!b) return;
+  document.getElementById('pdName').textContent=myRow.position+' — Brief';
+  document.getElementById('pdIcon').className='ti '+(b.icon||'ti-clipboard-list')+' pd-icon';
+  document.getElementById('pdGallery').innerHTML='<div class="info-body-text" style="white-space:pre-wrap;line-height:1.7;padding:6px 2px 20px;">'+esc(b.body)+'</div>';
+  S.posId=null; S.posSlide=0;
+  document.getElementById('posDetail').classList.add('open');
+  document.querySelector('.pd-scroll').scrollTop=0;
+}
+// Show/hide the Info-Hub 'view your guide / brief' buttons for the current host.
+function updatePositionButtons(){
+  var myRow=getMyRow();
+  var gb=document.getElementById('posGuideBtn'), bb=document.getElementById('posBriefBtn');
+  if(!myRow){ if(gb)gb.style.display='none'; if(bb)bb.style.display='none'; return; }
+  var gpos=matchPosition(myRow.position);
+  var hasGuide=gpos && ((DATA.positionGuides||{})[gpos.name]||[]).length;
+  if(gb){ if(hasGuide){document.getElementById('posGuideLbl').textContent='View your '+myRow.position+' position guide';gb.style.display='flex';} else gb.style.display='none'; }
+  var brief=findPositionBrief(myRow.position);
+  if(bb){ if(brief){document.getElementById('posBriefLbl').textContent='View your position brief';bb.style.display='flex';} else bb.style.display='none'; }
+}
 function goToMyPos(){
   var myRow=getMyRow();if(!myRow)return;
-  var position=DATA.positions.find(function(p){return p.name===myRow.position;});
+  var position=matchPosition(myRow.position);
   if(position)openPD(position.id);
 }
 
