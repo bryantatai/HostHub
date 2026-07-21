@@ -1040,7 +1040,8 @@ function parseSheetData(results){
   var newSched={};
   dataRows(schedRows,'Day').forEach(function(r){
     if(!r[0]||!r[2]||r[5]==='N')return;
-    var day=r[0].trim();
+    var day=normalizeGpcDay(r[0]);  // normalise like the roster so date-formatted
+                                    // Day cells (e.g. 2026-07-23) match TODAY_DATE
     if(!newSched[day])newSched[day]=[];
     newSched[day].push({time:(r[1]||'').trim(),item:r[2].trim(),type:(r[3]||'normal').trim(),note:(r[4]||'').trim(),photo:(r[6]||'').trim(),active:'Y'});
   });
