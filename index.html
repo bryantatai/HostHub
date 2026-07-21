@@ -1037,13 +1037,35 @@ function parseSheetData(results){
 
   // ── SCHEDULE tab ──────────────────────────────────────────────────────────
   // Cols: Day | Time | Item | Type (normal/transition/note) | Host note | Active
-  var newSched={};
+  // Schedule days are often left BLANK on some rows (people rely on the visual
+  // grouping in Sheets). So: carry the day down to blank rows, and start a new day
+  // when the clock resets to morning (e.g. 9:30 PM -> 8:30 AM = next day).
+  function schedTimeMin(t){
+    var m=String(t||'').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if(!m) return null; // "All day", "1 hr transition", etc. -> not a clock time
+    var hh=+m[1], mm=+m[2], ap=(m[3]||'').toUpperCase();
+    if(ap==='PM'&&hh!==12) hh+=12; if(ap==='AM'&&hh===12) hh=0;
+    return hh*60+mm;
+  }
+  var gpcFulls=GPC_DAYS.map(function(x){return x.full;});
+  var newSched={}, curDay='', lastMin=-1;
   dataRows(schedRows,'Day').forEach(function(r){
-    if(!r[0]||!r[2]||r[5]==='N')return;
-    var day=normalizeGpcDay(r[0]);  // normalise like the roster so date-formatted
-                                    // Day cells (e.g. 2026-07-23) match TODAY_DATE
-    if(!newSched[day])newSched[day]=[];
-    newSched[day].push({time:(r[1]||'').trim(),item:r[2].trim(),type:(r[3]||'normal').trim(),note:(r[4]||'').trim(),photo:(r[6]||'').trim(),active:'Y'});
+    if(!r[2]||r[5]==='N')return;                 // need an Item + active (Day may be blank)
+    var resolved=normalizeGpcDay(r[0]);
+    var idx=gpcFulls.indexOf(resolved);
+    var tmin=schedTimeMin(r[1]);
+    if(idx>-1){
+      curDay=gpcFulls[idx];                      // row states its day explicitly
+    } else if(curDay){
+      var ci=gpcFulls.indexOf(curDay);           // blank day: detect a new day on a time reset
+      if(tmin!==null && lastMin>-1 && tmin<lastMin && ci>-1 && ci<gpcFulls.length-1){
+        curDay=gpcFulls[ci+1];
+      }
+    }
+    if(tmin!==null) lastMin=tmin;
+    if(!curDay) return;                          // no day established yet — skip
+    if(!newSched[curDay])newSched[curDay]=[];
+    newSched[curDay].push({time:(r[1]||'').trim(),item:r[2].trim(),type:(r[3]||'normal').trim(),note:(r[4]||'').trim(),photo:(r[6]||'').trim(),active:'Y'});
   });
   if(Object.keys(newSched).length) DATA.schedule=newSched;
 
