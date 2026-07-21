@@ -822,14 +822,20 @@ async function fetchSheetTab(tabName, fallbackName, fingerprint){
 function dataRows(rows, headerToken){
   if(!rows || !rows.length) return [];
   var tok=String(headerToken).trim().toLowerCase();
-  var scan=Math.min(rows.length,6);
+  var scan=Math.min(rows.length,8);
   for(var i=0;i<scan;i++){
     var r=rows[i]||[];
     for(var j=0;j<r.length;j++){
       if(String(r[j]).trim().toLowerCase()===tok) return rows.slice(i+1);
     }
   }
-  return rows.slice(3); // fallback: banner, note, header, then data
+  // Header row not found: Google's export dropped the banner/note/header rows
+  // entirely, so what's left is already pure data — return it all rather than
+  // blindly skipping 3 rows (which would eat real data). As a last resort for a
+  // normal 3-row preamble, only skip 3 if the first row clearly looks like a banner.
+  var first=(rows[0]||[]).map(function(c){return String(c||'');}).join('');
+  if(/^[^A-Za-z0-9]/.test(first) || first.indexOf('|')>-1) return rows.slice(3);
+  return rows;
 }
 
 async function fetchAllFromSheet(){
