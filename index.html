@@ -551,6 +551,26 @@ textarea.lf-input{resize:none;line-height:1.6;min-height:80px;}
 
 /* Icon font fallback: if Tabler fails to load, keep layout intact */
 i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1em;line-height:1;font-style:normal;}
+
+/* ── ported: published debrief read-only view + status pills ── */
+/* Status pills in the editor */
+.df-status{display:inline-block;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
+.df-status.published{background:var(--green-l);color:var(--green);}
+.df-status.draft{background:#FFF3E0;color:var(--or-d);}
+.df-status.empty{background:var(--bg);color:var(--label-3);}
+.debrief-ic-note{font-size:13px;color:var(--label-2);line-height:1.6;text-align:center;margin-top:12px;padding:0 8px;}
+/* Read-only published view */
+.debrief-read-hdr{background:linear-gradient(135deg,#F5FBF0,#EAF6E0);border:1px solid #CDE8BC;border-radius:var(--r);padding:16px;margin-bottom:14px;}
+.debrief-read-badge{display:inline-flex;align-items:center;gap:5px;background:var(--green);color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;}
+.debrief-read-badge i{font-size:13px;}
+.debrief-read-title{font-size:18px;font-weight:800;color:var(--dark);}
+.debrief-read-by{font-size:13px;color:var(--label-2);margin-top:3px;}
+.debrief-read-section{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;}
+.debrief-read-sec-hdr{display:flex;align-items:center;gap:9px;padding:13px 15px;background:var(--bg);border-bottom:.5px solid var(--sep-2);}
+.debrief-read-sec-icon{width:30px;height:30px;background:var(--or-l);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.debrief-read-sec-icon i{font-size:15px;color:var(--or-d);}
+.debrief-read-sec-title{font-size:16px;font-weight:800;color:var(--dark);}
+.debrief-read-body{padding:14px 16px;font-size:16px;line-height:1.75;color:var(--dark);}
 </style>
 </head>
 <body>
@@ -1948,9 +1968,10 @@ function renderDebrief(){
   html+='<div class="session-btns-db">';
   ['S1','S2'].forEach(function(sess){
     var entry=getDebriefEntry(S.debriefDay,sess);
-    var canSeeDraft=S.icUnlocked||S.leadUnlocked;
+    // A draft is only visible as "draft" to a lead, or to the IC tagged for THIS slot.
+    var canSeeDraft=S.leadUnlocked||(S.icUnlocked&&isDebriefICForSlot(GPC_DAYS[S.debriefDay].full,sess));
     var visibleStatus=entry.status==='draft'&&!canSeeDraft?'empty':entry.status;
-    var statusLabel=visibleStatus==='published'?'Published':visibleStatus==='draft'?'Draft — private':'No notes yet';
+    var statusLabel=visibleStatus==='published'?'Published':visibleStatus==='draft'?'Draft — leads/IC only':'No notes yet';
     var statusClass=visibleStatus;
     var time=entry.timeSlot||sessionTimeSlot(sess);
     html+='<button class="sess-btn-db" onclick="openDebriefSess(\''+sess+'\')">';
@@ -1972,56 +1993,66 @@ function renderDebriefSession(el){
   var sessLabel=(S.debriefSess==='S1'?'AM — ':'PM — ')+(entry.timeSlot||sessionTimeSlot(S.debriefSess));
   var html='<button class="debrief-back" onclick="closeDebriefSess()"><i class="ti ti-arrow-left"></i>'+esc(day.full)+'</button>';
 
-  if(entry.status==='published'||S.icUnlocked||S.leadUnlocked){
-    if(entry.status==='published'&&!S.icUnlocked&&!S.leadUnlocked){
-      // Read view — use sections stored at publish time if available
-      var readSections=(entry._sections||DATA.debrief.sections).filter(function(s){return !s.hidden;});
-      html+='<div class="sec-label">'+esc(day.full)+' · '+esc(sessLabel)+'</div>';
-      readSections.forEach(function(sec){
-        var val=entry[sec.id]||'';
-        html+='<div class="debrief-section"><div class="debrief-sec-hdr"><div class="debrief-sec-icon"><i class="ti '+esc(sec.icon)+'"></i></div><div class="debrief-sec-title">'+esc(sec.title)+'</div></div>';
-        html+=val?'<div class="debrief-sec-body">'+esc(val)+'</div>':'<div class="debrief-sec-empty">Nothing noted.</div>';
-        html+='</div>';
-      });
-      html+='<button class="debrief-unlock-btn" onclick="openPasscode(\'debrief_ic\')"><i class="ti ti-lock"></i>IC / Lead — edit notes</button>';
-    } else {
-      // Write form (IC or lead unlocked)
-      entry=ensureDebriefEntry(S.debriefDay,S.debriefSess);
-      var editSections=entry._sections;
-      var level=S.leadUnlocked?'Lead':'IC';
-      html+='<div class="debrief-form-hdr"><i class="ti ti-clipboard-list"></i><span class="debrief-form-hdr-text">'+esc(day.full)+' · '+esc(sessLabel)+'</span><span class="debrief-form-hdr-badge">'+level+'</span></div>';
-      // Section management toolbar
-      html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
-      html+='<span style="font-size:12px;color:var(--label-2);">'+editSections.filter(function(s){return !s.hidden;}).length+' sections</span>';
-      html+='<button onclick="addDebriefSection()" style="display:flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;font-weight:600;color:var(--or-d);cursor:pointer;"><i class="ti ti-plus" style="font-size:15px;"></i>Add section</button>';
+  // Who can edit THIS slot? Leads always; ICs only if tagged for this slot.
+  var canEdit=S.leadUnlocked||(S.icUnlocked&&isDebriefICForSlot(day.full,S.debriefSess));
+  // Who is even allowed to be offered the unlock button?
+  var mayUnlock=isDebriefICAnywhere()||S.leadUnlocked||S.icUnlocked;
+
+  if(canEdit){
+    // ── WRITE FORM (lead, or IC tagged for this slot) ──
+    entry=ensureDebriefEntry(S.debriefDay,S.debriefSess);
+    var editSections=entry._sections;
+    var level=S.leadUnlocked?'Lead':'Debrief IC';
+    var statusPill=entry.status==='published'?'<span class="df-status published">Published</span>':entry.status==='draft'?'<span class="df-status draft">Draft</span>':'<span class="df-status empty">Not started</span>';
+    html+='<div class="debrief-form-hdr"><i class="ti ti-clipboard-list"></i><span class="debrief-form-hdr-text">'+esc(day.full)+' · '+esc(sessLabel)+'</span><span class="debrief-form-hdr-badge">'+level+'</span></div>';
+    html+='<div style="margin:-4px 0 12px;">'+statusPill+(entry.updatedBy?'<span style="font-size:12px;color:var(--label-3);margin-left:8px;">last edit: '+esc(entry.updatedBy)+'</span>':'')+'</div>';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+    html+='<span style="font-size:12px;color:var(--label-2);">'+editSections.filter(function(s){return !s.hidden;}).length+' sections</span>';
+    html+='<button onclick="addDebriefSection()" style="display:flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;font-weight:600;color:var(--or-d);cursor:pointer;"><i class="ti ti-plus" style="font-size:15px;"></i>Add section</button>';
+    html+='</div>';
+    editSections.forEach(function(sec,si){
+      if(sec.hidden)return;
+      var val=entry[sec.id]||'';
+      html+='<div class="debrief-field" id="dsec_'+si+'">';
+      html+='<div class="debrief-field-hdr" style="justify-content:space-between;">';
+      html+='<div style="display:flex;align-items:center;gap:8px;flex:1;"><div class="debrief-field-icon"><i class="ti '+sec.icon+'"></i></div><div><div class="debrief-field-label">'+esc(sec.title)+'</div><div class="debrief-field-hint">'+esc(sec.hint.split('\n')[0])+'</div></div></div>';
+      html+='<button onclick="toggleDebriefSection('+si+')" style="background:none;border:none;padding:4px;cursor:pointer;color:var(--label-3);" title="'+(sec.isDefault?'Hide section':'Delete section')+'"><i class="ti '+(sec.isDefault?'ti-eye-off':'ti-trash')+'" style="font-size:15px;"></i></button>';
       html+='</div>';
-      editSections.forEach(function(sec,si){
-        if(sec.hidden)return;
-        var val=entry[sec.id]||'';
-        html+='<div class="debrief-field" id="dsec_'+si+'">';
-        html+='<div class="debrief-field-hdr" style="justify-content:space-between;">';
-        html+='<div style="display:flex;align-items:center;gap:8px;flex:1;"><div class="debrief-field-icon"><i class="ti '+sec.icon+'"></i></div><div><div class="debrief-field-label">'+esc(sec.title)+'</div><div class="debrief-field-hint">'+esc(sec.hint.split('\n')[0])+'</div></div></div>';
-        html+='<button onclick="toggleDebriefSection('+si+')" style="background:none;border:none;padding:4px;cursor:pointer;color:var(--label-3);" title="'+(sec.isDefault?'Hide section':'Delete section')+'"><i class="ti '+(sec.isDefault?'ti-eye-off':'ti-trash')+'" style="font-size:15px;"></i></button>';
-        html+='</div>';
-        html+='<textarea class="debrief-textarea" id="df_'+sec.id+'" placeholder="'+esc(sec.hint)+'">'+esc(val)+'</textarea></div>';
+      html+='<textarea class="debrief-textarea" id="df_'+sec.id+'" placeholder="'+esc(sec.hint)+'">'+esc(val)+'</textarea></div>';
+    });
+    var hiddenDefaults=editSections.filter(function(s){return s.isDefault&&s.hidden;});
+    if(hiddenDefaults.length){
+      html+='<div style="margin-top:6px;margin-bottom:10px;">';
+      hiddenDefaults.forEach(function(sec){
+        var realIdx=editSections.indexOf(sec);
+        html+='<button onclick="restoreDebriefSection('+realIdx+')" style="display:inline-flex;align-items:center;gap:5px;margin:0 6px 6px 0;padding:5px 10px;background:var(--bg);border:1px solid var(--sep);border-radius:20px;font-size:12px;font-weight:600;color:var(--label-2);cursor:pointer;"><i class="ti ti-eye" style="font-size:13px;"></i>Restore: '+esc(sec.title)+'</button>';
       });
-      // Show hidden default sections as restore buttons
-      var hiddenDefaults=editSections.filter(function(s){return s.isDefault&&s.hidden;});
-      if(hiddenDefaults.length){
-        html+='<div style="margin-top:6px;margin-bottom:10px;">';
-        hiddenDefaults.forEach(function(sec,si){
-          var realIdx=editSections.indexOf(sec);
-          html+='<button onclick="restoreDebriefSection('+realIdx+')" style="display:inline-flex;align-items:center;gap:5px;margin:0 6px 6px 0;padding:5px 10px;background:var(--bg);border:1px solid var(--sep);border-radius:20px;font-size:12px;font-weight:600;color:var(--label-2);cursor:pointer;"><i class="ti ti-eye" style="font-size:13px;"></i>Restore: '+esc(sec.title)+'</button>';
-        });
-        html+='</div>';
-      }
-      html+='<button class="btn-save-draft" onclick="saveDebriefDraft()">Save draft</button>';
-      if(S.leadUnlocked) html+='<button class="btn-publish" onclick="publishDebrief()">Publish to all hosts</button>';
+      html+='</div>';
     }
+    html+='<button class="btn-save-draft" onclick="saveDebriefDraft()">Save draft</button>';
+    if(S.leadUnlocked) html+='<button class="btn-publish" onclick="publishDebrief()">Publish to all hosts</button>';
+    else html+='<p class="debrief-ic-note">Your draft is saved for Host Leads to review. Only a Host Lead can publish it to all hosts.</p>';
+
+  } else if(entry.status==='published'){
+    // ── READ-ONLY PUBLISHED VIEW (all hosts) — nicely formatted, not editable ──
+    var readSections=(entry._sections||DATA.debrief.sections).filter(function(s){return !s.hidden;});
+    html+='<div class="debrief-read-hdr"><div class="debrief-read-badge"><i class="ti ti-checks"></i>Published</div><div class="debrief-read-title">'+esc(day.full)+' · '+esc(sessLabel)+'</div>'+(entry.updatedBy?'<div class="debrief-read-by">Notes by '+esc(entry.updatedBy)+'</div>':'')+'</div>';
+    var anyContent=false;
+    readSections.forEach(function(sec){
+      var val=entry[sec.id]||'';
+      if(!val.trim())return; // in read view, skip empty sections for a clean look
+      anyContent=true;
+      html+='<div class="debrief-read-section"><div class="debrief-read-sec-hdr"><div class="debrief-read-sec-icon"><i class="ti '+esc(sec.icon)+'"></i></div><div class="debrief-read-sec-title">'+esc(sec.title)+'</div></div>';
+      html+='<div class="debrief-read-body">'+esc(val).replace(/\n/g,'<br>')+'</div></div>';
+    });
+    if(!anyContent) html+='<div class="debrief-read-section"><div class="debrief-sec-empty">No notes were recorded for this session.</div></div>';
+    // Only offer the edit unlock to people who could plausibly edit (IC-tagged or lead)
+    if(mayUnlock) html+='<button class="debrief-unlock-btn" onclick="openPasscode(\'debrief_ic\')"><i class="ti ti-lock"></i>IC / Lead — edit notes</button>';
+
   } else {
-    // Not published, not unlocked — show locked state
-    html+='<div class="debrief-not-published"><i class="ti ti-clock"></i><p>Debrief notes for '+esc(day.full)+' '+esc(sessLabel)+' haven\'t been published yet. Check back after the session ends.</p></div>';
-    html+='<button class="debrief-unlock-btn" onclick="openPasscode(\'debrief_ic\')"><i class="ti ti-lock"></i>IC / Lead — write debrief notes</button>';
+    // ── NOT PUBLISHED, host cannot see draft ──
+    html+='<div class="debrief-not-published"><i class="ti ti-clock"></i><p>Debrief notes for '+esc(day.full)+' '+esc(sessLabel)+' haven\'t been published yet. Check back after the session.</p></div>';
+    if(mayUnlock) html+='<button class="debrief-unlock-btn" onclick="openPasscode(\'debrief_ic\')"><i class="ti ti-lock"></i>IC / Lead — write debrief notes</button>';
   }
   el.innerHTML=html;
 }
@@ -2117,7 +2148,7 @@ async function publishDebrief(){
 function openPasscode(target){
   S.pcTarget=target;
   var titles={lead:'Lead access',debrief_ic:'IC / Lead access',debrief_lead:'Lead access'};
-  var subs={lead:'Enter the shared lead passcode.',debrief_ic:'ICs: enter IC passcode. Leads: enter lead passcode.',debrief_lead:'Enter the lead passcode to publish.'};
+  var subs={lead:'Enter the shared lead passcode.',debrief_ic:'Debrief ICs: enter the IC passcode (works only for your assigned session). Leads: use the lead passcode.',debrief_lead:'Enter the lead passcode to publish.'};
   document.getElementById('pcTitle').textContent=titles[target]||'Access';
   document.getElementById('pcSub').textContent=subs[target]||'Enter passcode.';
   document.getElementById('pcInput').value=''; pcErr('');
@@ -2126,6 +2157,19 @@ function openPasscode(target){
 }
 function closePC(){document.getElementById('pcOverlay').classList.remove('open');}
 function pcErr(m){document.getElementById('pcErr').textContent=m;}
+function isDebriefICForSlot(dayFull,sess){
+  if(!S.name) return false;
+  return DATA.roster.some(function(r){
+    return r.name===S.name && r.day===dayFull && r.session===sess &&
+      (r.remarks||'').toLowerCase().indexOf('debrief ic')>-1;
+  });
+}
+function isDebriefICAnywhere(){
+  if(!S.name) return false;
+  return DATA.roster.some(function(r){
+    return r.name===S.name && (r.remarks||'').toLowerCase().indexOf('debrief ic')>-1;
+  });
+}
 async function checkPasscode(){
   var v=document.getElementById('pcInput').value;
   var t=S.pcTarget;
@@ -2134,6 +2178,24 @@ async function checkPasscode(){
   try{
     var result=await apiGet({action:'verifyAccess',passcode:v});
     var role=result.status==='ok'?result.role:'';
+    if(!role) throw new Error('denied');
+    // Leads may unlock anything. IC passcode ONLY works if this user is tagged
+    // as a Debrief IC for the slot they're trying to open (Remark = "Debrief IC").
+    if(role==='ic'){
+      var dayFull=GPC_DAYS[S.debriefDay]?GPC_DAYS[S.debriefDay].full:TODAY_DATE;
+      var sess=S.debriefSess||'S1';
+      // For lead-panel target we don't gate by slot; IC can't open the lead panel anyway.
+      if(t==='debrief_ic'){
+        if(!isDebriefICForSlot(dayFull,sess)){
+          pcErr('This passcode only works for the assigned Debrief IC of this session.');
+          document.getElementById('pcInput').value='';
+          return;
+        }
+      } else {
+        // 'lead' / 'debrief_lead' targets require a lead role
+        throw new Error('denied');
+      }
+    }
     var allowed=(t==='debrief_ic'&&(role==='ic'||role==='lead'))||((t==='lead'||t==='debrief_lead')&&role==='lead');
     if(!allowed)throw new Error('denied');
     S.debriefPasscode=v;
@@ -2379,10 +2441,11 @@ function renderLInfo(){
     }
     html+='<div class="le-section" style="opacity:'+(isHidden?.4:1)+';margin-bottom:10px;">'+
       '<div class="le-section-hdr">'+
-        '<div style="flex:1;"><input style="font-size:14px;font-weight:700;color:var(--dark);border:none;background:transparent;outline:none;width:100%;" id="info_title_'+realIdx+'" value="'+esc(s.title)+'"/><div class="le-section-sub">'+esc(s.position)+'</div></div>'+
+        '<div style="flex:1;"><input style="font-size:14px;font-weight:700;color:var(--dark);border:none;background:transparent;outline:none;width:100%;" id="info_title_'+realIdx+'" value="'+esc(s.title)+'"/></div>'+
         '<label class="toggle-sw" title="'+(isHidden?'Show':'Hide')+'"><input type="checkbox" '+(isHidden?'':'checked')+' onchange="toggleInfoActive('+realIdx+')"/><span class="slider"></span></label>'+
       '</div>'+
       '<textarea class="le-field" id="info_body_'+realIdx+'" rows="4" style="border-top:.5px solid var(--sep-2);">'+esc(s.body)+'</textarea>'+
+      '<div class="le-row" style="border-top:.5px solid var(--sep-2);"><div class="le-row-label">Filter</div><div class="le-row-value"><input class="le-field" id="info_pos_'+realIdx+'" value="'+esc(s.position||'All')+'" placeholder="All, or a position name (sets the filter pill)"/></div></div>'+
       '<div class="le-row" style="border-top:.5px solid var(--sep-2);"><div class="le-row-label">Photo</div><div class="le-row-value"><input class="le-field" id="info_photo_'+realIdx+'" value="'+esc(s.photo||'')+'" placeholder="Paste Google Drive link"/></div></div>'+
     '</div>';
   });
@@ -2403,9 +2466,11 @@ function saveLInfo(){
     var tEl=document.getElementById('info_title_'+realIdx);
     var bEl=document.getElementById('info_body_'+realIdx);
     var pEl=document.getElementById('info_photo_'+realIdx);
+    var posEl=document.getElementById('info_pos_'+realIdx);
     if(tEl) s.title=tEl.value;
     if(bEl) s.body=bEl.value;
     if(pEl) s.photo=pEl.value.trim();
+    if(posEl) s.position=posEl.value.trim()||'All';
   });
   // Send everything, mapping the internal markers back to sheet columns
   var payload=DATA.info.map(function(s){
