@@ -1127,6 +1127,11 @@ function normalizeGpcDay(raw){
   if(!s) return '';
   // Already canonical?
   for(var i=0;i<GPC_DAYS.length;i++){ if(s===GPC_DAYS[i].full) return s; }
+  // Weekday-name based (e.g. "Fri", "Friday", "Fri 24 Jul", "Fri Jul 24 2026").
+  // GPC runs Thu–Mon, so each weekday maps to exactly one day — very robust.
+  var _low=s.toLowerCase();
+  var _wd={thu:'Thu 23 Jul',fri:'Fri 24 Jul',sat:'Sat 25 Jul',sun:'Sun 26 Jul',mon:'Mon 27 Jul'};
+  for(var _k in _wd){ if(_low.indexOf(_k)===0) return _wd[_k]; }
   // Try to find the day-of-month for a July 2026 date.
   var dom=null;
   // ISO or dash: 2026-07-23 or 2026/07/23
