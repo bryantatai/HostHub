@@ -1058,12 +1058,9 @@ function parseSheetData(results){
     newPositionGuides[position].push({url:r[1].trim(),alt:(r[2]||position+' position guide').trim(),sort:parseFloat(r[3])||0});
   });
   Object.keys(newPositionGuides).forEach(function(position){newPositionGuides[position].sort(function(a,b){return a.sort-b.sort;});});
-  var mergedPG=JSON.parse(JSON.stringify(POSITION_GUIDE_IMGS));
-  Object.keys(newPositionGuides).forEach(function(pos){
-    var imgs=newPositionGuides[pos].filter(function(x){return String(x.url).indexOf('data:')===0;});
-    if(imgs.length) mergedPG[pos]=imgs;
-  });
-  DATA.positionGuides=mergedPG;
+  // Always use the built-in baked images. The sheet's Position Guides tab is ignored
+  // — its Drive links (or Google-truncated data URIs) were causing "Image unavailable".
+  DATA.positionGuides=POSITION_GUIDE_IMGS;
 
   // ── POSITION BRIEFS tab ───────────────────────────────────────────────────
   // Cols: Position | Icon keyword | Body text | Active (Y/N)
@@ -1512,13 +1509,17 @@ function doRefresh(){
 // Generates "Day N — Weekday DD Mon YYYY" from the date so leads never edit it.
 // If a lead HAS typed a custom label in the Sheet, that wins.
 function autoDayLabel(){
-  if(DATA.today.dayLabel && DATA.today.dayLabel.trim()) return DATA.today.dayLabel;
+  // Reflect the SELECTED day first, so the header updates when a host switches day/slot.
   var idx=GPC_DAYS.map(function(x){return x.full;}).indexOf(TODAY_DATE);
-  var d=GPC_DAYS[idx>-1?idx:0];
-  if(!d) return '';
-  var weekdays={Thu:'Thursday',Fri:'Friday',Sat:'Saturday',Sun:'Sunday',Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday'};
-  var wd=weekdays[d.label]||d.label;
-  return 'Day '+((idx>-1?idx:0)+1)+' — '+wd+' '+d.date+' 2026';
+  if(idx>-1){
+    var d=GPC_DAYS[idx];
+    var weekdays={Thu:'Thursday',Fri:'Friday',Sat:'Saturday',Sun:'Sunday',Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday'};
+    var wd=weekdays[d.label]||d.label;
+    return 'Day '+(idx+1)+' — '+wd+' '+d.date+' 2026';
+  }
+  // Unknown day — fall back to a manual label from the Today tab, if any.
+  if(DATA.today.dayLabel && DATA.today.dayLabel.trim()) return DATA.today.dayLabel;
+  return '';
 }
 
 function renderToday(){
