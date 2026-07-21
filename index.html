@@ -826,7 +826,13 @@ function dataRows(rows, headerToken){
   for(var i=0;i<scan;i++){
     var r=rows[i]||[];
     for(var j=0;j<r.length;j++){
-      if(String(r[j]).trim().toLowerCase()===tok) return rows.slice(i+1);
+      var cell=String(r[j]==null?'':r[j]).trim().toLowerCase();
+      // Exact header cell, OR the header label glued onto the end of a merged
+      // banner cell — Google's CSV export can collapse the banner+note+header
+      // rows into ONE row, ending "...(app). Name". Detect both.
+      if(cell===tok || (cell.length>tok.length && cell.slice(-tok.length)===tok && cell.indexOf('|')>-1)){
+        return rows.slice(i+1);
+      }
     }
   }
   // Header row not found: Google's export dropped the banner/note/header rows
@@ -1715,9 +1721,12 @@ function renderRosterGroups(){
     // Sort by role within position
     hosts.sort(function(a,b){return roleRank(a.role)-roleRank(b.role);});
 
-    // Area IC and Comms IC are NEVER paired — always sit above everyone
-    var lead_rows   = hosts.filter(function(r){return r.role==='Area IC'||r.role==='Comms IC';});
-    var engage_rows = hosts.filter(function(r){return r.role!=='Area IC'&&r.role!=='Comms IC';});
+    // Area IC / Comms IC sit above everyone — UNLESS they've been given an
+    // explicit pair group, in which case respect the pairing (keeps a paired IC
+    // with their partner instead of splitting them out).
+    function isLead(r){return (r.role==='Area IC'||r.role==='Comms IC')&&!r.pairGroup;}
+    var lead_rows   = hosts.filter(function(r){return isLead(r);});
+    var engage_rows = hosts.filter(function(r){return !isLead(r);});
 
     var pairMap={};
     engage_rows.forEach(function(r){
