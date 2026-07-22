@@ -511,6 +511,15 @@ textarea.lf-input{resize:none;line-height:1.6;min-height:80px;}
 .pg-counter{position:absolute;right:12px;bottom:14px;background:rgba(0,0,0,.62);color:#fff;padding:6px 10px;border-radius:18px;font-size:13px;font-weight:800;letter-spacing:.2px;z-index:2;}
 .pg-dots{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;z-index:2;}
 .pg-dot{width:7px;height:7px;border-radius:50%;border:none;padding:0;background:rgba(255,255,255,.45);cursor:pointer;}.pg-dot.active{background:#fff;transform:scale(1.25);}
+.pg-brief-slide{background:#111;padding:0;}
+.pg-brief-card{width:100%;height:100%;background:var(--card);display:flex;flex-direction:column;overflow-y:auto;text-align:left;}
+.pg-brief-head{background:linear-gradient(135deg,var(--or),var(--or-d));color:#fff;padding:26px 22px 22px;flex-shrink:0;}
+.pg-brief-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;opacity:.92;margin-bottom:10px;}
+.pg-brief-pos{font-size:25px;font-weight:800;line-height:1.12;margin-bottom:9px;}
+.pg-brief-tag{font-size:15px;font-weight:600;line-height:1.45;opacity:.98;}
+.pg-brief-body{padding:20px 22px 30px;display:flex;flex-direction:column;gap:15px;}
+.pg-brief-item{display:flex;gap:11px;align-items:flex-start;font-size:15px;line-height:1.5;color:var(--dark);}
+.pg-brief-dot{flex-shrink:0;width:8px;height:8px;border-radius:50%;background:var(--or);margin-top:7px;}
 .pg-empty{height:calc(100vh - 155px);min-height:420px;background:var(--card);border-radius:var(--r-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;color:var(--label-2);box-shadow:var(--shadow);}
 .pg-empty i{font-size:38px;color:var(--sep);margin-bottom:12px}.pg-empty p{font-size:16px;line-height:1.6;max-width:260px;}
 .pd-hero{background:var(--or);border-radius:var(--r-lg);padding:18px;margin-bottom:12px;display:flex;align-items:center;gap:14px;}
@@ -674,17 +683,17 @@ i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1
   <div class="overlay" id="nameOverlay" onclick="handleOvClick(event)">
     <div class="sheet">
       <div class="sheet-handle"></div>
-      <div class="sheet-head"><div class="sheet-title">Tell us more about yourself</div><div class="sheet-sub">Key in your name and pick your session</div></div>
+      <div class="sheet-head"><div class="sheet-title">Set up your view</div><div class="sheet-sub">Pick your day and session, then your name</div></div>
       <div class="sheet-body">
-        <div class="sheet-lbl">Your name</div>
-        <select class="name-sel" id="nameSel" onchange="onNameChange()"><option value="">Select your name…</option></select>
-        <div class="sheet-lbl" style="margin-top:16px;">Conference Day</div>
+        <div class="sheet-lbl">Conference Day</div>
         <div class="sess-btns" style="flex-wrap:wrap;gap:6px;margin-bottom:16px;" id="dayBtns"></div>
         <div class="sheet-lbl">Your session</div>
-        <div class="sess-btns">
+        <div class="sess-btns" style="margin-bottom:16px;">
           <button class="sb" id="s1b" onclick="pickSess('S1')"><div class="sb-time">10:30am – 4:00pm</div><div class="sb-lbl">Session 1 (AM)</div></button>
           <button class="sb" id="s2b" onclick="pickSess('S2')"><div class="sb-time">2:00pm – 7:00pm</div><div class="sb-lbl">Session 2 (PM)</div></button>
         </div>
+        <div class="sheet-lbl">Your name</div>
+        <select class="name-sel" id="nameSel" onchange="onNameChange()"><option value="">Select your name…</option></select>
         <button class="sheet-cta" id="sheetCta" onclick="confirmName()" disabled>Confirm — show my assignment</button>
         <button class="sheet-skip" onclick="skipPicker()">Skip for now</button>
       </div>
@@ -949,7 +958,37 @@ function parseSheetData(results){
     if(todayMap.day_label) DATA.today.dayLabel=todayMap.day_label;
     if(todayMap.motd)      DATA.today.motd=todayMap.motd;
     DATA.today.alerts=[todayMap.alert_1,todayMap.alert_2,todayMap.alert_3].filter(Boolean);
+    DATA.today._map=todayMap;  // keep all keys so motd/alerts can be resolved PER DAY at render
   }
+
+  // ── QUICK REF tab ─────────────────────────────────────────────────────────
+  // Cols: Label | Value | Active | Photo URL
+  var newQR=[];
+  dataRows(qrRows,'Label').forEach(function(r){
+    if(!r[0]||String(r[2]||'Y').toUpperCase()==='N')return;
+    newQR.push({label:String(r[0]).trim(), value:String(r[1]||'').trim(), photo:String(r[3]||'').trim()});
+  });
+  if(newQR.length) DATA.quickref=newQR;
+
+  // ── CONTINGENCIES (SOS) tab ───────────────────────────────────────────────
+  // Cols: Scenario | Icon keyword | Steps (one per line) | Active
+  var newSOS=[];
+  dataRows(sosRows,'Scenario').forEach(function(r){
+    if(!r[0]||String(r[3]||'Y').toUpperCase()==='N')return;
+    newSOS.push({scenario:String(r[0]).trim(), icon:String(r[1]||'ti-alert-triangle').trim(),
+                 steps:String(r[2]||'').split(/\r?\n/).map(function(s){return s.trim();}).filter(Boolean), active:'Y'});
+  });
+  if(newSOS.length) DATA.sos=newSOS;
+
+  // ── CONNECT tab ───────────────────────────────────────────────────────────
+  // Cols: Chat name | Description | Duty day | Telegram invite URL | Active
+  var newConn=[];
+  dataRows(connectRows,'Chat name').forEach(function(r){
+    if(!r[0]||String(r[4]||'Y').toUpperCase()==='N')return;
+    newConn.push({label:String(r[0]).trim(), desc:String(r[1]||'').trim(), day:String(r[2]||'').trim(),
+                  url:String(r[3]||'').trim(), active:'Y'});
+  });
+  if(newConn.length) DATA.connect=newConn;
 
   // ── ROSTER tab ────────────────────────────────────────────────────────────
   // Cols: Name | Day | Session | Position | Role | Time slot | Team | Remarks | Pair group | Active
@@ -1091,7 +1130,9 @@ function parseSheetData(results){
     if(!r[0]||String(r[3]||'Y').toUpperCase()==='N')return;
     newBriefs.push({position:String(r[0]).trim(), icon:String(r[1]||'ti-clipboard-list').trim(), body:String(r[2]||'').trim()});
   });
-  if(newBriefs.length) DATA.positionBriefs=newBriefs;
+  // Position briefs are baked into the app (authoritative wording), same as the guide
+  // images — so the sheet tab is intentionally NOT applied and can't override them.
+  void newBriefs;
 
   // Re-render current view
   renderAll();
@@ -1358,7 +1399,7 @@ var DATA = {
     {name:"Alexander Tai",day:"Mon 27 Jul",session:"S2",position:"Unassigned",role:"",time:"12:00 PM \u2013 7:00PM",team:"Reinforcement",remarks:"",pairGroup:"",active:"Y"},
   ],
   positionGuides:POSITION_GUIDE_IMGS,
-  positionBriefs:[],
+  positionBriefs:[{position:"Ground",icon:"ti-door-enter",body:"First impression matters \u2728 Welcome our guests with your brightest smiles!\nAs it is a public area, we don't have to say welcome to HOGC! We can kindly ask if they are attending the conference and if so, they can head to Level 4.\nIf they have luggage, they can drop it off and also register at Level 3."},{position:"Level 3",icon:"ti-luggage",body:"Anchor the registration process \u2728\nWelcome the delegates in and proceed with registration and luggage check-in!\nRefer to the verbiage on the Word document :)\nFriends from Usher and Helpdesk will be there to help with the collection and arranging of luggage!"},{position:"Level 4 lobby",icon:"ti-user-check",body:"Warm welcome to HOGC AND GPC \u2728\nGet them to prepare their QR codes for registration.\nIf you spot anyone with luggage, redirect them to Level 3 for drop-off!"},{position:"Atrium: Registration Kiosk",icon:"ti-clipboard-list",body:"Create a smooth but warm registration process \u2728\nWe want to provide a world-class, seamless experience with our tight process \u2014 but our very warm welcome!\nEncourage big groups to split into 5 per order ID to facilitate quicker collection.\nAssist them with the registration if needed, otherwise let them experience the system themselves!\nDirect 1\u20132 people to the collection counter while encouraging the rest to explore the Atrium."},{position:"Atrium: Collection Kiosk",icon:"ti-gift",body:"Create a smooth but warm collection process \u2728\nShare key information (check through lanyards, explore the folio on their own, Global Hosts will be connecting with them shortly).\nStrike a conversation if their items are still being packed \u2014 create experience!\nENJOY THE CONFERENCE!"}],
   positions:[
     {id:'ground',       name:'Ground',        icon:'ti-map-pin',       sub:'First contact · Outside',     desc:'You are the first face delegates see. Stand at the main entrance and step in before they have to figure out what to do.',tip:'Darting eyes = new guest. Beeline to toilet = returning. A warm hello is all it takes.'},
     {id:'lobby',        name:'Lobby',         icon:'ti-door-enter',    sub:'Entry layer · Inside',        desc:'Watch the lobby reaction. Amazement = first timer. Straight walk = returning delegate.',tip:'Step in before they have to figure out what to do.'},
@@ -1549,7 +1590,20 @@ function autoDayLabel(){
   return '';
 }
 
+function applyTodayForDay(){
+  // Resolve motd/alerts for the CURRENTLY selected day. A base key (motd) applies to
+  // all days; a day-suffixed key (motd_fri, alert_1_sat) overrides it for that day.
+  var m=DATA.today._map; if(!m) return;
+  var ab=((GPC_DAYS.filter(function(d){return d.full===TODAY_DATE;})[0])||{}).label;
+  function pick(base){
+    if(ab){ var k=base+'_'+ab.toLowerCase(); if(m[k]!==undefined && String(m[k]).trim()!=='') return m[k]; }
+    return m[base]||'';
+  }
+  var md=pick('motd'); if(md) DATA.today.motd=md;
+  DATA.today.alerts=[pick('alert_1'),pick('alert_2'),pick('alert_3')].filter(Boolean);
+}
 function renderToday(){
+  applyTodayForDay();
   document.getElementById('alertArea').innerHTML=DATA.today.alerts.map(function(a){
     return '<div class="alert-card"><i class="ti ti-alert-triangle"></i><p>'+esc(a)+'</p></div>';
   }).join('');
@@ -1572,7 +1626,7 @@ function renderToday(){
       pos=DATA.positions.find(function(p){var n=String(p.name||'').trim().toLowerCase();return n && (_mp===n || _mp.indexOf(n+':')===0 || _mp.indexOf(n+' ')===0);});
     }
     tp.innerHTML='<div class="hero" id="heroCard"><div class="hero-day">'+esc(autoDayLabel())+'</div><div class="hero-pos-row"><div class="hero-pos-icon"><i class="ti '+(pos?pos.icon:'ti-map-pin')+'"></i></div><div><div class="hero-pos-label">My position today</div><div class="hero-pos-name">'+esc(myRow.position)+'</div><div class="hero-pos-time">'+esc(myRow.time)+'</div></div></div><div class="hero-motd-label">Host message</div><div class="hero-motd">'+esc(DATA.today.motd)+'</div></div>';
-    if(pos) document.getElementById('heroCard').onclick=function(){openPD(pos.id);};
+    document.getElementById('heroCard').onclick=function(){openPD(pos?pos.id:null, myRow.position);};
   } else if(myLead){
     // Host Manager / Supervisor — show their leadership role in the hero
     tp.innerHTML='<div class="hero"><div class="hero-day">'+esc(autoDayLabel())+'</div><div class="hero-pos-row"><div class="hero-pos-icon"><i class="ti ti-crown"></i></div><div><div class="hero-pos-label">My role today</div><div class="hero-pos-name" style="font-size:24px;">'+esc(myLead.role)+'</div><div class="hero-pos-time">'+esc(myLead.time)+'</div></div></div><div class="hero-motd-label">Host message</div><div class="hero-motd">'+esc(DATA.today.motd)+'</div></div>';
@@ -1644,7 +1698,7 @@ function renderTodayTiles(){
     var crew=seen[posName];
     var mp=matchPosition(posName);              // tolerant match for icon + guide
     var icon=mp?mp.icon:'ti-map-pin';
-    var onclick=mp?('openPD(\''+mp.id+'\')'):'';
+    var onclick="openPD("+(mp?("'"+mp.id+"'"):'null')+",'"+String(posName).replace(/'/g,"")+"')";
     html+='<button class="pos-tile-sm" onclick="'+onclick+'"><i class="ti '+icon+'"></i><div class="pos-tile-name">'+esc(posName)+'</div><div class="pos-tile-crew">'+crew.length+'</div></button>';
   });
   html+='</div>';
@@ -1931,7 +1985,9 @@ function matchPosition(posName){
   var mp=String(posName).trim().toLowerCase();
   var p=DATA.positions.find(function(x){return String(x.name).trim().toLowerCase()===mp;});
   if(p) return p;
-  return DATA.positions.find(function(x){var n=String(x.name).trim().toLowerCase();return n && (mp.indexOf(n+':')===0||mp.indexOf(n+' ')===0);})||null;
+  p=DATA.positions.find(function(x){var n=String(x.name).trim().toLowerCase();return n && (mp.indexOf(n+':')===0||mp.indexOf(n+' ')===0);});
+  if(p) return p;
+  return DATA.positions.find(function(x){var n=String(x.name).trim().toLowerCase();return n && n.length>2 && mp.indexOf(n)>-1;})||null;
 }
 // Find a host's brief: exact position, else fall back to a broader match.
 function findPositionBrief(posName){
@@ -1943,13 +1999,9 @@ function findPositionBrief(posName){
 }
 function openBrief(){
   var myRow=getMyRow(); if(!myRow) return;
-  var b=findPositionBrief(myRow.position); if(!b) return;
-  document.getElementById('pdName').textContent=myRow.position+' — Brief';
-  document.getElementById('pdIcon').className='ti '+(b.icon||'ti-clipboard-list')+' pd-icon';
-  document.getElementById('pdGallery').innerHTML='<div class="info-body-text" style="white-space:pre-wrap;line-height:1.7;padding:6px 2px 20px;">'+esc(b.body)+'</div>';
-  S.posId=null; S.posSlide=0;
-  document.getElementById('posDetail').classList.add('open');
-  document.querySelector('.pd-scroll').scrollTop=0;
+  if(!findPositionBrief(myRow.position)) return;
+  var mp=matchPosition(myRow.position);
+  openPD(mp?mp.id:null, myRow.position);   // opens the guide with the brief card first
 }
 // Show/hide the Info-Hub 'view your guide / brief' buttons for the current host.
 function updatePositionButtons(){
@@ -1965,7 +2017,7 @@ function updatePositionButtons(){
 function goToMyPos(){
   var myRow=getMyRow();if(!myRow)return;
   var position=matchPosition(myRow.position);
-  if(position)openPD(position.id);
+  openPD(position?position.id:null, myRow.position);
 }
 
 // ── WOW BOX ───────────────────────────────────────────────────────────────────
@@ -2108,7 +2160,8 @@ function renderDebrief(){
 }
 
 function selectDebriefDay(i){S.debriefDay=i;S.debriefSess=null;renderDebrief();}
-function openDebriefSess(sess){S.debriefSess=sess;renderDebrief();}
+function editDebriefNotes(){ S.debriefEditMode=true; renderDebrief(); }
+function openDebriefSess(sess){S.debriefSess=sess;S.debriefEditMode=false;renderDebrief();}
 
 function renderDebriefSession(el){
   var entry=getDebriefEntry(S.debriefDay,S.debriefSess);
@@ -2120,8 +2173,11 @@ function renderDebriefSession(el){
   var canEdit=S.leadUnlocked||(S.icUnlocked&&isDebriefICForSlot(day.full,S.debriefSess));
   // Who is even allowed to be offered the unlock button?
   var mayUnlock=isDebriefICAnywhere()||S.leadUnlocked||S.icUnlocked;
+  // Editors see the PUBLISHED (read-only) view first for an already-published slot,
+  // and tap "Edit" to open the form. Drafts / not-started open straight into the form.
+  var showForm=canEdit && (S.debriefEditMode || entry.status!=='published');
 
-  if(canEdit){
+  if(showForm){
     // ── WRITE FORM (lead, or IC tagged for this slot) ──
     entry=ensureDebriefEntry(S.debriefDay,S.debriefSess);
     var editSections=entry._sections;
@@ -2170,7 +2226,8 @@ function renderDebriefSession(el){
     });
     if(!anyContent) html+='<div class="debrief-read-section"><div class="debrief-sec-empty">No notes were recorded for this session.</div></div>';
     // Only offer the edit unlock to people who could plausibly edit (IC-tagged or lead)
-    if(mayUnlock) html+='<button class="debrief-unlock-btn" onclick="openPasscode(\'debrief_ic\')"><i class="ti ti-lock"></i>IC / Lead — edit notes</button>';
+    if(canEdit) html+='<button class="debrief-unlock-btn" onclick="editDebriefNotes()"><i class="ti ti-pencil"></i>Edit these notes</button>';
+    else if(mayUnlock) html+='<button class="debrief-unlock-btn" onclick="openPasscode(\'debrief_ic\')"><i class="ti ti-lock"></i>IC / Lead — edit notes</button>';
 
   } else {
     // ── NOT PUBLISHED, host cannot see draft ──
@@ -2260,6 +2317,7 @@ async function publishDebrief(){
     if(result.status!=='ok')throw new Error(result.message||'Publish failed');
     document.getElementById('newBanner').innerHTML='<div class="alert-card" style="background:var(--green-l);border-color:var(--green);margin-bottom:10px;"><i class="ti ti-check" style="color:var(--green);"></i><p style="color:var(--dark);">Debrief published — all hosts can now read it.</p></div>';
     showDebriefToast('✓ Debrief published',false);
+    S.debriefEditMode=false;
     setTimeout(function(){fetchDebriefs(S.debriefPasscode);},900);
     renderDebrief();
   }catch(e){
@@ -2708,15 +2766,28 @@ function saveLConnect(){
 }
 
 // ── POS DETAIL ────────────────────────────────────────────────────────────────
-function openPD(id){
-  if(!id)return;var p=DATA.positions.find(function(x){return x.id===id;});if(!p)return;
-  S.posId=id;
+function openPD(id, specificPos){
+  var p=id?DATA.positions.find(function(x){return x.id===id;}):null;
+  var name=specificPos||(p?p.name:'');
+  if(!name)return;
+  S.posId=p?id:null;
+  S.posSpecific=name;
   S.posSlide=0;
-  document.getElementById('pdName').textContent=p.name;
-  document.getElementById('pdIcon').className='ti '+p.icon+' pd-icon';
-  renderPositionGallery(p);
+  document.getElementById('pdName').textContent=name;
+  document.getElementById('pdIcon').className='ti '+(p?p.icon:'ti-map-pin')+' pd-icon';
+  renderPositionGallery(p||{name:name});
   document.getElementById('posDetail').classList.add('open');
   document.querySelector('.pd-scroll').scrollTop=0;
+}
+// Styled brief card shown as the first slide of a position guide.
+function renderBriefCard(brief, posName){
+  var lines=String(brief.body||'').split(/\r?\n/).map(function(s){return s.trim();}).filter(Boolean);
+  var tag=lines.length?lines[0]:'';
+  var bullets=lines.slice(1);
+  var html='<div class="pg-brief-card"><div class="pg-brief-head"><div class="pg-brief-badge"><i class="ti ti-sparkles"></i>Your role</div><div class="pg-brief-pos">'+esc(posName)+'</div><div class="pg-brief-tag">'+esc(tag)+'</div></div><div class="pg-brief-body">';
+  bullets.forEach(function(b){ html+='<div class="pg-brief-item"><span class="pg-brief-dot"></span><span>'+esc(b)+'</span></div>'; });
+  html+='</div></div>';
+  return html;
 }
 function closePD(){document.getElementById('posDetail').classList.remove('open');S.posId=null;S.posSlide=0;S.posTouchX=null;}
 
@@ -2744,27 +2815,38 @@ function driveImageUrl(url){
 }
 
 function renderPositionGallery(position){
-  var images=(DATA.positionGuides&&DATA.positionGuides[position.name])||[];
+  var spec=S.posSpecific||position.name;
+  var mp=matchPosition(spec);
+  var images=(DATA.positionGuides&&DATA.positionGuides[mp?mp.name:spec])||[];
+  var brief=findPositionBrief(spec);
   var host=document.getElementById('pdGallery');
-  if(!images.length){
-    host.innerHTML='<div class="pg-empty"><i class="ti ti-photo-off"></i><p>No guide images yet. Add image links for '+esc(position.name)+' in the Position Guides sheet.</p></div>';
+  var slides=[];
+  if(brief) slides.push({type:'brief'});
+  images.forEach(function(img){slides.push({type:'img',img:img});});
+  S.posSlideCount=slides.length;
+  if(!slides.length){
+    host.innerHTML='<div class="pg-empty"><i class="ti ti-photo-off"></i><p>No guide for '+esc(spec)+' yet.</p></div>';
     return;
   }
-  if(S.posSlide>=images.length)S.posSlide=images.length-1;
-  var html='<div class="pg-carousel" id="pgCarousel">';
-  html+='<div class="pg-track" id="pgTrack" style="transform:translateX(-'+(S.posSlide*100)+'%);">';
-  images.forEach(function(image,i){
-    var cands=driveImageCandidates(image.url);
-    var candAttr=esc(JSON.stringify(cands));
-    html+='<div class="pg-slide"><img '+(i?'loading="lazy"':'')+' draggable="false" src="'+esc(cands[0]||'')+'" data-cands=\''+candAttr+'\' data-ci="0" alt="'+esc(image.alt||position.name+' guide '+(i+1))+'" onerror="galleryPhotoFail(this)"/></div>';
+  if(S.posSlide>=slides.length)S.posSlide=slides.length-1;
+  if(S.posSlide<0)S.posSlide=0;
+  var html='<div class="pg-carousel" id="pgCarousel"><div class="pg-track" id="pgTrack" style="transform:translateX(-'+(S.posSlide*100)+'%);">';
+  slides.forEach(function(s,i){
+    if(s.type==='brief'){
+      html+='<div class="pg-slide pg-brief-slide">'+renderBriefCard(brief,spec)+'</div>';
+    }else{
+      var cands=driveImageCandidates(s.img.url);
+      var candAttr=esc(JSON.stringify(cands));
+      html+='<div class="pg-slide"><img '+(i?'loading="lazy"':'')+' draggable="false" src="'+esc(cands[0]||'')+'" data-cands=\''+candAttr+'\' data-ci="0" alt="'+esc(s.img.alt||spec)+'" onerror="galleryPhotoFail(this)"/></div>';
+    }
   });
   html+='</div>';
-  if(images.length>1){
-    html+='<button class="pg-nav prev" onclick="movePositionSlide(-1)" '+(S.posSlide===0?'disabled':'')+' aria-label="Previous image"><i class="ti ti-chevron-left"></i></button>';
-    html+='<button class="pg-nav next" onclick="movePositionSlide(1)" '+(S.posSlide===images.length-1?'disabled':'')+' aria-label="Next image"><i class="ti ti-chevron-right"></i></button>';
-    html+='<div class="pg-dots">'+images.map(function(_,i){return '<button class="pg-dot'+(i===S.posSlide?' active':'')+'" onclick="setPositionSlide('+i+')" aria-label="Image '+(i+1)+'"></button>';}).join('')+'</div>';
+  if(slides.length>1){
+    html+='<button class="pg-nav prev" onclick="movePositionSlide(-1)" '+(S.posSlide===0?'disabled':'')+'><i class="ti ti-chevron-left"></i></button>';
+    html+='<button class="pg-nav next" onclick="movePositionSlide(1)" '+(S.posSlide===slides.length-1?'disabled':'')+'><i class="ti ti-chevron-right"></i></button>';
+    html+='<div class="pg-dots">'+slides.map(function(_,i){return '<button class="pg-dot'+(i===S.posSlide?' active':'')+'" onclick="setPositionSlide('+i+')"></button>';}).join('')+'</div>';
   }
-  html+='<div class="pg-counter">'+(S.posSlide+1)+' / '+images.length+'</div></div>';
+  html+='<div class="pg-counter">'+(S.posSlide+1)+' / '+slides.length+'</div></div>';
   host.innerHTML=html;
   var carousel=document.getElementById('pgCarousel');
   carousel.addEventListener('touchstart',function(e){S.posTouchX=e.changedTouches[0].clientX;},{passive:true});
@@ -2776,9 +2858,10 @@ function renderPositionGallery(position){
 }
 
 function setPositionSlide(index){
-  var p=DATA.positions.find(function(x){return x.id===S.posId;});if(!p)return;
-  var images=(DATA.positionGuides&&DATA.positionGuides[p.name])||[];
-  S.posSlide=Math.max(0,Math.min(index,images.length-1));renderPositionGallery(p);
+  var p=S.posId?DATA.positions.find(function(x){return x.id===S.posId;}):null;
+  var n=(S.posSlideCount||1);
+  S.posSlide=Math.max(0,Math.min(index,n-1));
+  renderPositionGallery(p||{name:S.posSpecific||''});
 }
 function movePositionSlide(direction){setPositionSlide(S.posSlide+direction);}
 function galleryPhotoFail(img){
