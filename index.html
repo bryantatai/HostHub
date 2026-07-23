@@ -621,8 +621,8 @@ i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1
     <!-- ROSTER -->
     <div class="page" id="page-roster">
       <div class="roster-toggle">
-        <button class="rst-btn" id="rst-S1" onclick="setRosterSess('S1')">AM<span>10:30am – 4:00pm</span></button>
-        <button class="rst-btn" id="rst-S2" onclick="setRosterSess('S2')">PM<span>2:00pm – 7:00pm</span></button>
+        <button class="rst-btn" id="rst-S1" onclick="setRosterSess('S1')">AM</button>
+        <button class="rst-btn" id="rst-S2" onclick="setRosterSess('S2')">PM</button>
       </div>
       <div class="search-wrap open" id="searchWrap">
         <i class="ti ti-search search-icon"></i>
@@ -689,8 +689,8 @@ i[class^="ti"], i[class*=" ti-"]{display:inline-block;min-width:1em;min-height:1
         <div class="sess-btns" style="flex-wrap:wrap;gap:6px;margin-bottom:16px;" id="dayBtns"></div>
         <div class="sheet-lbl">Your session</div>
         <div class="sess-btns" style="margin-bottom:16px;">
-          <button class="sb" id="s1b" onclick="pickSess('S1')"><div class="sb-time">10:30am – 4:00pm</div><div class="sb-lbl">Session 1 (AM)</div></button>
-          <button class="sb" id="s2b" onclick="pickSess('S2')"><div class="sb-time">2:00pm – 7:00pm</div><div class="sb-lbl">Session 2 (PM)</div></button>
+          <button class="sb" id="s1b" onclick="pickSess('S1')"><div class="sb-lbl">Session 1 (AM)</div></button>
+          <button class="sb" id="s2b" onclick="pickSess('S2')"><div class="sb-lbl">Session 2 (PM)</div></button>
         </div>
         <div class="sheet-lbl">Your name</div>
         <select class="name-sel" id="nameSel" onchange="onNameChange()"><option value="">Select your name…</option></select>
@@ -2121,7 +2121,7 @@ function sessionTimeSlot(sess){
   var counts={};
   DATA.roster.filter(function(r){return r.day===day&&r.session===sess&&r.time;}).forEach(function(r){counts[r.time]=(counts[r.time]||0)+1;});
   var times=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
-  return times[0]||(sess==='S1'?'10:30am – 4:00pm':'2:00pm – 7:00pm');
+  return times[0]||'';  // derive from the roster's Time slot column; no hardcoded fallback
 }
 
 function renderDebrief(){
@@ -2151,7 +2151,7 @@ function renderDebrief(){
     var time=entry.timeSlot||sessionTimeSlot(sess);
     html+='<button class="sess-btn-db" onclick="openDebriefSess(\''+sess+'\')">';
     html+='<div class="sess-btn-db-label">'+esc(sess==='S1'?'AM':'PM')+'</div>';
-    html+='<div class="sess-btn-db-time">'+esc(time)+'</div>';
+    if(time) html+='<div class="sess-btn-db-time">'+esc(time)+'</div>';
     html+='<span class="sess-status '+statusClass+'">'+esc(statusLabel)+'</span>';
     html+='</button>';
   });
@@ -2166,7 +2166,8 @@ function openDebriefSess(sess){S.debriefSess=sess;S.debriefEditMode=false;render
 function renderDebriefSession(el){
   var entry=getDebriefEntry(S.debriefDay,S.debriefSess);
   var day=GPC_DAYS[S.debriefDay];
-  var sessLabel=(S.debriefSess==='S1'?'AM — ':'PM — ')+(entry.timeSlot||sessionTimeSlot(S.debriefSess));
+  var _dt=(entry.timeSlot||sessionTimeSlot(S.debriefSess));
+  var sessLabel=(S.debriefSess==='S1'?'AM':'PM')+(_dt?' — '+_dt:'');
   var html='<button class="debrief-back" onclick="closeDebriefSess()"><i class="ti ti-arrow-left"></i>'+esc(day.full)+'</button>';
 
   // Who can edit THIS slot? Leads always; ICs only if tagged for this slot.
